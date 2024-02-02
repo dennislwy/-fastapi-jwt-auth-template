@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "fastapi-jwt-auth-template"
+version = "0.1.0"
+description = "FastAPI JWT Authentication Template"
+authors = ["Dennis Lee (dennislwy) <wylee2000@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.8.1,<4.0"
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0.post1"}
+sqlalchemy = "^2.0.25"
+alembic = "^1.13.1"
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
