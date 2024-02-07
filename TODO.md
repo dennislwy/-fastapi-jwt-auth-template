@@ -2,7 +2,7 @@
 ## General
 
 ## Auth
-- [ ] when login, allow "Remember me" (refresh token 30 days)
+- [ ] when login, allow "Remember me" (access token 1 day, refresh token 30 days)
 - [ ] Token revocation
     - when user logged out, session will be revoked. Tokens of same session will be denied access.
 - [ ] Token reply attack prevention
