@@ -26,14 +26,16 @@
 
 ## Session Tracking
 - [ ] user able to view all active session (like GitHub)
-    - last active time
-    - browser info (e.g: Google Chrome (Windows))
-    - sign in
-        - time
-        - IP address
-        - location info
-        - geo location (e.g: Puchong, Selangor, Malaysia)
-        - coordinate
+    - session_id
+    - user_id
+    - last_active
+    - last_user_agent
+    - last_ip_address
+    - last_location
+    - login_time
+    - login_user_agent
+    - login_ip_address
+    - login_location
 - [ ] user can revoke selective session(s) or all sessions
 
 ## Two-factor Authentication
