@@ -25,13 +25,12 @@ async def init_db():
         # Create all tables defined in the Base metadata
         await conn.run_sync(Base.metadata.create_all)
 
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
-    Returns an asynchronous session generator.
+    Get an asynchronous session from the session maker.
 
     Yields:
-        AsyncSession: An asynchronous session object.
-
+        AsyncSession: The asynchronous session object.
     """
     # Create an asynchronous session using async_session_maker
     async with async_session_maker() as session:

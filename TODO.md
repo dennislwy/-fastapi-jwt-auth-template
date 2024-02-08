@@ -5,8 +5,10 @@
 - [ ] when login, allow "Remember me" (access token 1 day, refresh token 30 days)
 - [ ] Token revocation
     - when user logged out, session will be revoked. Tokens of same session will be denied access.
+    - active session info will be store in cache & database (same expiry time as the refresh token)
 - [ ] Token reply attack prevention
     - when user refreshes tokens, old tokens will be revoked. Refresh token are for single use only
+    - blacklist tokens will be store in memory cache until they expire
 - [ ] Token reuse attack prevention
     - As security measures, session will be revoke if revoked token was reused
 
