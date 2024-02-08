@@ -2,11 +2,10 @@ import sys
 import logging
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+import app.models
 from app.database import init_db
 from app.routers import router
 from app.config import settings
-from app.auth.models import Base as AuthBase
-from app.users.models import Base as UsersBase
 
 # Logging uncaught exceptions, https://stackoverflow.com/a/16993115
 def handle_exception(exc_type, exc_value, exc_traceback):
@@ -34,7 +33,8 @@ app.include_router(router)
 async def startup():
     logging.info("Starting up server")
     # Not needed if you setup a migration system like Alembic
-    await init_db([AuthBase, UsersBase])
+    # await init_db([AuthBase, UsersBase])
+    await init_db()
 
 async def shutdown():
     logging.info("Shutting down server")

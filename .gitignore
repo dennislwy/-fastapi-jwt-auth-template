@@ -1,5 +1,6 @@
 *.log.*
 *.db
+.vscode/
 test*.*
 app-old/
 
