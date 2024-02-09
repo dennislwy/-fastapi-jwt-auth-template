@@ -1,6 +1,36 @@
+image:
+    name: python:3.10
+
 include:
   - project: 'gsftech/templates/gitlab-ci'
     file: 'sonarqube-python.gitlab-ci.yml'
 
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PYTHON_VER: "3.10"
+
 stages:
+  - linting
   - code quality
+
+.install_dependencies:
+  before_script:
+    - python -V
+    - python -m pip install poetry
+    - python -m poetry config virtualenvs.in-project true
+    - python -m poetry install --only main
+
+pylint:
+  stage: linting
+  extends: .install_dependencies
+  script:
+    - pip install pylint-gitlab
+
+    #C0301 - line-too-long
+    - pylint --exit-zero -d C0301 "./app"
+  tags:
+    - docker
+  except:
+    - master

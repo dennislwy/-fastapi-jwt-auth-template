@@ -42,21 +42,20 @@ async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm
                 db: Annotated[AsyncSession, Depends(get_db)]):
     pass
 
-def authenticate_user(email: str, password: str, db: AsyncSession):
+async def authenticate_user(email: str, password: str, db: AsyncSession):
     """
-    Authenticates a user by checking if the provided username and password match
-    the ones stored in the database.
+    Authenticates a user based on the provided email and password.
 
     Args:
-        email (str): The email address of the user.
+        email (str): The email of the user.
         password (str): The password of the user.
         db (AsyncSession): The database session.
 
     Returns:
-        user: The user object if authentication is successful, False otherwise.
+        Union[User, bool]: The authenticated user object if authentication is successful, False otherwise.
     """
     # Retrieve the user from the database based on the provided username
-    user = get_user_by_email(email, db)
+    user = await get_user_by_email(email, db)
 
     # Check if the user exists
     if not user:
