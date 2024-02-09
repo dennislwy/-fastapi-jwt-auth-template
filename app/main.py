@@ -32,8 +32,8 @@ app.include_router(router)
 
 async def startup():
     logging.info("Starting up server")
+
     # Not needed if you setup a migration system like Alembic
-    # await init_db([AuthBase, UsersBase])
     await init_db()
 
 async def shutdown():

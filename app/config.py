@@ -12,8 +12,6 @@ class Settings(BaseSettings):
     REMEMBER_ME_ACCESS_TOKEN_EXPIRE_MINUTES: int
     REMEMBER_ME_REFRESH_TOKEN_EXPIRE_MINUTES: int
 
-    CLIENT_ORIGIN: str
-
     class Config:
         env_file = './.env'
 

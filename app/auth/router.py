@@ -1,4 +1,6 @@
+import uuid
 from typing import Annotated
+from datetime import timedelta
 from fastapi import APIRouter, Depends, status, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm, HTTPAuthorizationCredentials, HTTPBearer, SecurityScopes
 from sqlalchemy import select, exists
@@ -7,7 +9,10 @@ from app.users.schemas import UserCreateRequest
 from app.database import get_db, AsyncSession
 from app.users.models import User
 from app.user import get_user_by_email
+from app.config import settings
 from .schemas import TokensResponse
+from .utils import create_token
+
 
 router = r = APIRouter()
 
@@ -40,7 +45,47 @@ async def create_user(request: UserCreateRequest, db: Annotated[AsyncSession, De
 @r.post("/login", response_model=TokensResponse)
 async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
                 db: Annotated[AsyncSession, Depends(get_db)]):
-    pass
+
+    user = await authenticate_user(form_data.username, form_data.password, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inactive user"
+        )
+
+    # if not user.is_verified:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_403_FORBIDDEN,
+    #         detail="Unverified user"
+    #     )
+
+    # generate new session id
+    session_id = str(uuid.uuid4())
+
+    access_token_expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires_delta = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+
+    # create access token
+    access_token = create_token(
+        data={"sub": str(user.id), "email": user.email, "sid": session_id},
+        expires_delta=access_token_expires_delta)
+    print(f"access_token: {access_token}")
+
+    # create refresh token
+    refresh_token = create_token(
+        data={"sub": str(user.id), "sid": session_id},
+        expires_delta=refresh_token_expires_delta)
+    print(f"refresh_token: {refresh_token}")
+
+    # Return the access token, refresh token, and token type
+    return TokensResponse(access_token=access_token, refresh_token=refresh_token)
 
 async def authenticate_user(email: str, password: str, db: AsyncSession):
     """
@@ -62,7 +107,7 @@ async def authenticate_user(email: str, password: str, db: AsyncSession):
         return False
 
     # Verify the provided password against the stored password using bcrypt
-    if not bcrypt_context.verify(password, user.password):
+    if not bcrypt_context.verify(password, user.hashed_password):
         return False
 
     # Return the user object if authentication is successful

@@ -102,4 +102,5 @@ async def get_user_by_email(email: str, db: Annotated[AsyncSession, Depends(get_
     Returns:
         User: The retrieved user object or None if no user is found.
     """
-    return await db.execute(select(User).where(User.email == email)).scalar()
+    result = await db.execute(select(User).where(User.email == email))
+    return result.scalar()
