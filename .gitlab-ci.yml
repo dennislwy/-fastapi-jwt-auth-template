@@ -1,3 +1,6 @@
 include:
   - project: 'gsftech/templates/gitlab-ci'
     file: 'sonarqube-python.gitlab-ci.yml'
+
+stages:
+  - code quality
