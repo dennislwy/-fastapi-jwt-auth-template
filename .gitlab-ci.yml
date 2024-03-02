@@ -42,6 +42,8 @@ pytest:
   extends: .install_dependencies
   script:
     - pip list
+    - poetry shell
+    - pip list
     - pytest tests
   tags:
     - docker
