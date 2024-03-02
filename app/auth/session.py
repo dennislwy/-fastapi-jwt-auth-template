@@ -92,13 +92,26 @@ async def remove(user_id: str, session_id: Optional[str] = None) -> int:
 
     else:
         # delete all sessions of the user
-        sessions = await retrieve_sessions_by_userid(user_id=user_id, sort=False)
+        sessions = await retrieve_by_userid(user_id=user_id, sort=False)
         for session in sessions[user_id]:
             result += await cache.delete(key=session.session_id, namespace=user_id)
 
     return result
 
-async def retrieve_sessions_by_userid(
+async def retrieve(user_id: str, session_id: str) -> Optional[SessionInfo]:
+    """
+    Retrieve a user session from the cache.
+
+    Args:
+        user_id (str): The ID of the user.
+        session_id (str): The ID of the user session.
+
+    Returns:
+        Optional[SessionInfo]: The SessionInfo object if the session exists, None otherwise.
+    """
+    return await cache.get(key=session_id, namespace=user_id)
+
+async def retrieve_by_userid(
     user_id: Optional[str] = None,
     sort: bool = True) -> Dict[str, List[SessionInfo]]:
     """
