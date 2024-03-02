@@ -36,27 +36,29 @@ async def exists(user_id: str, session_id: str) -> bool:
     """
     return await cache.exists(key=session_id, namespace=user_id)
 
-async def update_last_activity(payload: dict):
+async def update_last_activity(token_payload: dict) -> bool:
     """
     Update the last activity timestamp of the user session.
 
     This function retrieves the user session from the cache using the user ID and session ID
-    from the payload. If the session exists, it updates the last activity timestamp to the
+    from the token payload. If the session exists, it updates the last activity timestamp to the
     current time and saves the updated session back to the cache.
 
     Args:
-        payload (dict): The payload of the token, which should include 'sub' (subject,
+        token_payload (dict): The payload of the token, which should include 'sub' (subject,
         representing the user ID) and 'sid' (session ID).
 
+    Return:
+        bool: True if the session was successfully updated, False otherwise.
     """
     # Retrieve the user ID & session ID from the payload
-    user_id = payload.get("sub")
-    session_id = payload.get("sid")
+    user_id = token_payload.get("sub")
+    session_id = token_payload.get("sid")
 
     # Check if the session exists in the cache
     if not await cache.exists(key=session_id, namespace=user_id):
         # If the session does not exist, return
-        return
+        return False
 
     # Get the session info from the cache
     value: SessionInfo = await cache.get(key=session_id, namespace=user_id)
@@ -65,7 +67,7 @@ async def update_last_activity(payload: dict):
     value.last_active = datetime.utcnow()
 
     # Save the updated session info back to the cache
-    await cache.set(key=session_id, namespace=user_id, value=value)
+    return await cache.set(key=session_id, namespace=user_id, value=value)
 
 async def remove(user_id: str, session_id: Optional[str] = None) -> int:
     """

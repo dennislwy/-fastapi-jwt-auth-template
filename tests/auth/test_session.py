@@ -29,23 +29,25 @@ async def create_session_in_cache(
 @pytest.mark.asyncio
 async def test_add():
     result = await create_session_in_cache(user_id=user_id, session_id=session_id)
+
+    # expected result is True since we added the session
     assert result is True
 
 @pytest.mark.asyncio
 async def test_exists():
     result = await exists(user_id, session_id)
 
+    # expected result is True since we added the session
     assert result is True
 
-# @pytest.mark.asyncio
-async def xtest_update_last_activity():
-    payload = {"sub": "user123", "sid": "session123"}
+@pytest.mark.asyncio
+async def test_update_last_activity():
+    payload = {"sub": user_id, "sid": session_id}
 
-    await update_last_activity(payload)
+    updated = await update_last_activity(payload)
 
-    # Assert that the last_active timestamp has been updated
-    # You can modify this assertion based on your specific implementation
-    assert datetime.utcnow() - value.last_active < timedelta(seconds=1)
+    # expected result is True since we updated the session
+    assert updated is True
 
 @pytest.mark.asyncio
 async def test_remove():
@@ -56,9 +58,9 @@ async def test_remove():
 
 # @pytest.mark.asyncio
 async def xtest_retrieve_sessions_by_userid():
-    user_id = "user123"
-
+    # Retrieve the sessions for the user_id
     sessions = await retrieve_sessions_by_userid(user_id)
+    print(sessions)
 
     # Assert that the sessions dictionary is not empty
     assert sessions
