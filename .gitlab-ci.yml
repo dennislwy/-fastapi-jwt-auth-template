@@ -19,7 +19,7 @@ stages:
 .install_dependencies:
   before_script:
     - python -V
-    - python -m pip install poetry pytest pytest-asyncio
+    - python -m pip install poetry
     - python -m poetry config virtualenvs.in-project true
     - python -m poetry install --only main
 
@@ -44,7 +44,7 @@ pytest:
     # - pip list
     # - python -m poetry shell
     - source .venv/bin/activate
-    - pip list
+    - pip install pytest pytest-asyncio
     - python -m pytest tests -v
   tags:
     - docker
