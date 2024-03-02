@@ -42,7 +42,8 @@ pytest:
   extends: .install_dependencies
   script:
     - pip list
-    - poetry shell
+    # - poetry shell
+    - source .venv/bin/activate
     - pip list
     - pytest tests
   tags:
