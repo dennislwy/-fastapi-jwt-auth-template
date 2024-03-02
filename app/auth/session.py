@@ -40,23 +40,34 @@ async def update_last_activity(payload: dict):
     """
     Update the last activity timestamp of the user session.
 
+    This function retrieves the user session from the cache using the user ID and session ID
+    from the payload. If the session exists, it updates the last activity timestamp to the
+    current time and saves the updated session back to the cache.
+
     Args:
-        payload (dict): The payload of the token.
+        payload (dict): The payload of the token, which should include 'sub' (subject,
+        representing the user ID) and 'sid' (session ID).
 
     """
     # Retrieve the user ID & session ID from the payload
     user_id = payload.get("sub")
     session_id = payload.get("sid")
 
+    # Check if the session exists in the cache
     if not await cache.exists(key=session_id, namespace=user_id):
+        # If the session does not exist, return
         return
 
-    # get session info from cache
+    # Get the session info from the cache
     value: SessionInfo = await cache.get(key=session_id, namespace=user_id)
+
+    # Update the last active timestamp to the current time
     value.last_active = datetime.utcnow()
+
+    # Save the updated session info back to the cache
     await cache.set(key=session_id, namespace=user_id, value=value)
 
-async def remove(user_id: str, session_id: Optional[str] = None):
+async def remove(user_id: str, session_id: Optional[str] = None) -> int:
     """
     Remove sessions based on the provided user_id and session_id.
 
@@ -66,20 +77,24 @@ async def remove(user_id: str, session_id: Optional[str] = None):
         all sessions of the user will be removed.
 
     Returns:
-        None
+        int: The number of sessions removed.
     """
     if not user_id:
         raise ValueError("user_id must be provided")
 
+    result = 0
+
     if session_id:
         # delete the specific user session of the user
-        await cache.delete(key=session_id, namespace=user_id)
+        result = await cache.delete(key=session_id, namespace=user_id)
 
     else:
         # delete all sessions of the user
         sessions = await retrieve_sessions_by_userid(user_id=user_id, sort=False)
         for session in sessions[user_id]:
-            await cache.delete(key=session.session_id, namespace=user_id)
+            result += await cache.delete(key=session.session_id, namespace=user_id)
+
+    return result
 
 async def retrieve_sessions_by_userid(
     user_id: Optional[str] = None,
