@@ -2,7 +2,9 @@
 ## General
 
 ## Auth
-- [ ] when login, allow "Remember me" (access token 1 day, refresh token 30 days)
+- [ ] when login, allow "Remember me"
+    - Remember me, access token 1 day, refresh token 2 weeks
+    - No remember me, access token 15min, refresh token 1 hour
 - [ ] Token revocation
     - when user logged out, session will be revoked. Tokens of same session will be denied access.
     - active session info will be store in cache & database (same expiry time as the refresh token)

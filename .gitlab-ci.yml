@@ -13,6 +13,7 @@ variables:
 
 stages:
   - linting
+  - test
   - code quality
 
 .install_dependencies:
@@ -34,3 +35,15 @@ pylint:
     - docker
   except:
     - master
+    - main
+
+pytest:
+  stage: test
+  extends: .install_dependencies
+  script:
+    - python -m pytest tests
+  tags:
+    - docker
+  except:
+    - master
+    - main

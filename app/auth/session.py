@@ -3,17 +3,20 @@ from datetime import datetime
 from aiocache import SimpleMemoryCache
 from .schemas import SessionInfo
 
-cache = SimpleMemoryCache() # key: session_id, namespace: user_id, value: SessionInfo
+# Use memory cache to store active user sessions
+# key: {user_id}{session_id}
+# value: SessionInfo
+cache = SimpleMemoryCache()
 
 async def add(user_id: str, session_id: str, value, ttl: int) -> bool:
     """
-    Add a session to the cache.
+    Add a user session to the cache.
 
     Args:
         user_id (str): The ID of the user.
-        session_id (str): The ID of the session.
+        session_id (str): The ID of the user session.
         value (Any): The value object.
-        ttl (int): The time-to-live (TTL) for the session in seconds.
+        ttl (int): The time-to-live (TTL) for the user session in seconds.
 
     Returns:
         bool: True if the session was successfully added to the cache, False otherwise.
@@ -22,14 +25,14 @@ async def add(user_id: str, session_id: str, value, ttl: int) -> bool:
 
 async def exists(user_id: str, session_id: str) -> bool:
     """
-    Checks if a session exists in the cache.
+    Checks if a user session exists in the cache.
 
     Args:
         user_id (str): The ID of the user.
-        session_id (str): The ID of the session.
+        session_id (str): The ID of the user session.
 
     Returns:
-        bool: True if the session exists, False otherwise.
+        bool: True if the user session exists, False otherwise.
     """
     return await cache.exists(key=session_id, namespace=user_id)
 
@@ -53,60 +56,72 @@ async def update_last_activity(payload: dict):
     value.last_active = datetime.utcnow()
     await cache.set(key=session_id, namespace=user_id, value=value)
 
-async def remove(user_id: Optional[str] = None, session_id: Optional[str] = None):
+async def remove(user_id: str, session_id: Optional[str] = None):
     """
     Remove sessions based on the provided user_id and session_id.
 
     Args:
-        user_id (Optional[str]): The ID of the user. If provided, sessions associated with this user will be removed.
-        session_id (Optional[str]): The ID of the session. If provided, the specified session will be removed.
+        user_id (str): The ID of the user.
+        session_id (Optional[str]): The ID of the user session. If not provided,
+        all sessions of the user will be removed.
 
     Returns:
         None
     """
-    if user_id:
-        if session_id:
-            # delete the specified session for the user
-            await cache.delete(key=session_id, namespace=user_id)
+    if not user_id:
+        raise ValueError("user_id must be provided")
 
-        else:
-            # delete all sessions for the user
-            sessions = await retrieve_sessions_by_userid(user_id=user_id, sort=False)
-            for session in sessions[user_id]:
-                await cache.delete(key=session.session_id, namespace=user_id)
+    if session_id:
+        # delete the specific user session of the user
+        await cache.delete(key=session_id, namespace=user_id)
 
     else:
-        if session_id is None:
-            # delete all sessions
-            await cache.clear()
-        else:
-            raise ValueError("session_id must be provided if user_id is not provided")
+        # delete all sessions of the user
+        sessions = await retrieve_sessions_by_userid(user_id=user_id, sort=False)
+        for session in sessions[user_id]:
+            await cache.delete(key=session.session_id, namespace=user_id)
 
-async def retrieve_sessions_by_userid(user_id: Optional[str] = None, sort: bool = True) -> Dict[str, List[SessionInfo]]:
+async def retrieve_sessions_by_userid(
+    user_id: Optional[str] = None,
+    sort: bool = True) -> Dict[str, List[SessionInfo]]:
     """
-    Gets session(s) from the cache, grouped by user id.
+    Get user session(s), grouped by user id.
 
     Args:
-        user_id (Optional[str]): The ID of the user. If None, all sessions will be returned.
-        sort (bool): Whether or not to sort the sessions by last active time in descending order.
+        user_id (Optional[str]): The ID of the user. If None, all user sessions will be returned.
+        Defaults to None
+        sort (bool): Whether or not to sort the user sessions by last active time in descending order.
+        Defaults is True.
 
     Returns:
-        Dict[str, List[SessionInfo]]: A dictionary of sessions, grouped by user ID.
+        Dict[str, List[SessionInfo]]: A dictionary of sessions, grouped by user ID. Each user ID
+        maps to a list of SessionInfo objects.
     """
-    c = cache._cache
+    # Access the underlying cache object
+    c = cache._cache # key: {user_id}{session_id}, value: SessionInfo
 
-    sessions = {} # key: user_id, value: list of SessionInfo
+    # Initialize an empty dictionary to hold the sessions
+    # Key: user_id, Value: list of SessionInfo
+    sessions = {}
 
+    # Iterate over all items in the cache
     for key, value in c.items():
+        # If no user_id is provided or if the key starts with the provided user_id
         if user_id is None or key.startswith(user_id):
+            # Extract the user_id from the key
             user_id = key[:36]
+            # If the user_id is not already in the sessions dictionary, add it
             if user_id not in sessions:
                 sessions[user_id] = []
+            # Append the session to the list of sessions for this user_id
             sessions[user_id].append(value)
 
+    # If sort is True, sort the sessions for each user_id
     if sort:
         for user_id in sessions:
+            # Sort the sessions by last_active time in descending order
             sessions[user_id] = sorted(sessions[user_id],
                                        key=lambda session: session.last_active, reverse=True)
 
+    # Return the dictionary of sessions
     return sessions
