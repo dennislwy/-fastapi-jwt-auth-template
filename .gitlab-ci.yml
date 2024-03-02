@@ -41,7 +41,8 @@ pytest:
   stage: test
   extends: .install_dependencies
   script:
-    - python -m pytest tests
+    - pip list
+    - pytest tests
   tags:
     - docker
   except:
