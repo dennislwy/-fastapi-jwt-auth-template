@@ -41,11 +41,11 @@ pytest:
   stage: test
   extends: .install_dependencies
   script:
+    # - pip list
+    - python -m poetry shell
+    # - source .venv/bin/activate
     - pip list
-    # - poetry shell
-    - source .venv/bin/activate
-    - pip list
-    - pytest tests -v
+    - python -m pytest tests -v
   tags:
     - docker
   except:
