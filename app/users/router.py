@@ -7,4 +7,4 @@ router = r = APIRouter()
 
 @r.get("/me")
 async def authenticated_route(user: Annotated[User, Depends(current_user)]):
-    return {"message": f"Hello {user.email}!"}
+    return {"message": f"Hello {user.name} <{user.email}>"}

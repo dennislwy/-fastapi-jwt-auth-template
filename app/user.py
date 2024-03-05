@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
@@ -89,7 +90,7 @@ async def get_user_by_id(user_id: str, db: Annotated[AsyncSession, Depends(get_d
     Returns:
         User: The retrieved user object or None if no user is found.
     """
-    return await db.get(User, user_id)
+    return await db.get(User, UUID(user_id))
 
 async def get_user_by_email(email: str, db: Annotated[AsyncSession, Depends(get_db)]) -> User:
     """

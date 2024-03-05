@@ -97,37 +97,54 @@ async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm
     access_token_expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     refresh_token_expires_delta = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
 
+    # user id string
+    user_id = str(user.id)
+
     # create access token
     access_token = create_token(
-        data={"sub": str(user.id), "email": user.email, "sid": session_id},
+        data={"sub": user_id, "email": user.email, "sid": session_id},
         expires_delta=access_token_expires_delta)
     print(f"access_token: {access_token}")
 
     # create refresh token
     refresh_token = create_token(
-        data={"sub": str(user.id), "sid": session_id},
+        data={"sub": user_id, "sid": session_id},
         expires_delta=refresh_token_expires_delta)
     print(f"refresh_token: {refresh_token}")
-
-    # add session id to sessions cache, expiry time = refresh token expiry time
-    session_key=f"{user.id}:{session_id}"
-    print(f"Adding '{session_key}' to sessions cache")
-
-    expiration_time = get_current_epoch() + refresh_token_expires_delta.seconds
 
     # Obtain user browser information
     user_agent = str(request.headers["User-Agent"])
     user_host = request.client.host
 
-    session_info = SessionInfo(user_id=str(user.id), session_id=session_id, user_agent=user_agent,
-                               user_host=user_host, last_active=datetime.utcnow(),
-                               exp=expiration_time)
-
-    await session.add(session_id=session_id, value=session_info,
-                      user_id=user.id, ttl=refresh_token_expires_delta.seconds)
+    # create new session and add to active session cache
+    await create_session(user.id, session_id, user_agent, user_host, refresh_token_expires_delta.seconds)
 
     # Return the access token, refresh token, and token type
     return TokensResponse(access_token=access_token, refresh_token=refresh_token)
+
+async def create_session(user_id: str, session_id: str, user_agent: str, user_host: str, ttl: int) -> bool:
+    """
+    Create a new session for the user.
+
+    Args:
+        user_id (str): The user ID.
+        session_id (str): The session ID.
+        user_agent (str): The user agent.
+        user_host (str): The user host.
+        ttl (int): The time to live for the session (seconds).
+
+    Returns:
+        bool: True if the session was successfully created, False otherwise.
+    """
+    # add session id to SessionInfo and add to active session cache
+    session_info = SessionInfo(user_id=user_id, session_id=session_id, user_agent=user_agent,
+                               user_host=user_host, last_active=datetime.utcnow(),
+                               exp=get_current_epoch() + ttl)
+
+    # add session id to sessions cache, expiry time = refresh token expiry time
+    print(f"Adding '{user_id}:{session_id}' to active sessions cache")
+
+    return await session.add(user_id=user_id, session_id=session_id, value=session_info, ttl=ttl)
 
 @r.post("/logout")
 async def logout(token: str = Depends(oauth2_scheme)):
