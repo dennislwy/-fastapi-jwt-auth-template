@@ -11,6 +11,11 @@ jobs:
       with:
         without-hashes: true
         outfile-name: requirements.txt
+    - name: Upload requirements.txt
+      uses: actions/upload-artifact@v4
+      with:
+        name: requirements_txt
+        path: requirements.txt
 
   lint:
     needs: export-requirements-txt
@@ -36,6 +41,11 @@ jobs:
 
       # - name: Export requirements.txt
       #   run: poetry export -f requirements.txt --output requirements.txt
+
+      - name: Download requirements-txt
+        uses: actions/download-artifact@v4
+        with:
+          name: requirements_txt
 
       - name: Lint with PyLint
         uses: Silleellie/pylint-github-action@v2
