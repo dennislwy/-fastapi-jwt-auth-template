@@ -6,26 +6,26 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
+      # - name: Set up Python ${{ matrix.python-version }}
+      #   uses: actions/setup-python@v4
+      #   with:
+      #     python-version: "3.9"
 
-      - name: Install poetry
-        uses: abatilo/actions-poetry@v2
+      # - name: Install poetry
+      #   uses: abatilo/actions-poetry@v2
 
-      - name: Setup a local virtual environment (if no poetry.toml file)
-        run: |
-          poetry config virtualenvs.create true --local
-          poetry config virtualenvs.in-project true --local
+      # - name: Setup a local virtual environment (if no poetry.toml file)
+      #   run: |
+      #     poetry config virtualenvs.create true --local
+      #     poetry config virtualenvs.in-project true --local
 
-      - name: Install the project dependencies
-        run: poetry install --only main
+      # - name: Install the project dependencies
+      #   run: poetry install --only main
 
-      - name: Export requirements.txt
-        run: poetry export -f requirements.txt --output requirements.txt
+      # - name: Export requirements.txt
+      #   run: poetry export -f requirements.txt --output requirements.txt
 
       - name: Lint with PyLint
         uses: Silleellie/pylint-github-action@v2
@@ -54,37 +54,3 @@ jobs:
           # Optional, Default: requirements.txt
           # requirements-path: requirements.txt
           # requirements-path: requirements.txt
-
-          # Path of the README.md to update with the pylint badge, relative to the repository root.
-          #
-          # Optional, Default: README.md
-          # readme-path: README.md
-
-          # Text to display in the badge
-          #
-          # Optional, Default: PyLint
-          # badge-text: PyLint
-
-          # Color of the badge for pylint scores < 5.
-          # Hex, rgb, rgba, hsl, hsla and css named colors can all be used
-          #
-          # Optional, Default: red
-          # color-bad-score: red
-
-          # Color of the badge for pylint scores in range [5,8).
-          # Hex, rgb, rgba, hsl, hsla and css named colors can all be used
-          #
-          # Optional, Default: orange
-          # color-ok-score: orange
-
-          # Color of the badge for pylint scores in range [8,10).
-          # Hex, rgb, rgba, hsl, hsla and css named colors can all be used
-          #
-          # Optional, Default: yellow
-          # color-good-score: yellow
-
-          # Color of the badge for pylint scores == 10.
-          # Hex, rgb, rgba, hsl, hsla and css named colors can all be used
-          #
-          # Optional, Default: brightgreen
-          # color-perfect-score: brightgreen
