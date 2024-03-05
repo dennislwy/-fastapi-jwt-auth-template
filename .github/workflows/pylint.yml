@@ -1,4 +1,4 @@
-name: Pylint
+name: Pylint diff Python versions
 
 on: [push]
 
