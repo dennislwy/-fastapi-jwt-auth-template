@@ -1,6 +1,7 @@
 import pytest
 import uuid
 import random
+from typing import Optional
 from datetime import datetime, timedelta
 from app.auth.session import add, exists, update_last_activity, remove, retrieve_by_userid, retrieve
 from app.auth.schemas import SessionInfo
@@ -10,7 +11,7 @@ session_id = "session-" + str(uuid.uuid4())[8:]
 
 async def create_session_in_cache(
     user_id: str,
-    session_id: str,
+    session_id: Optional[str] = None,
     ttl: int = 3600) -> bool:
     """
     Create a new session in the cache.
@@ -27,6 +28,9 @@ async def create_session_in_cache(
     Returns:
         bool: True if the session was successfully added to the cache, False otherwise.
     """
+    if session_id is None:
+        session_id = "session-" + str(uuid.uuid4())[8:]
+
     # Get the current time
     now = datetime.utcnow()
 
@@ -132,6 +136,16 @@ async def test_remove():
     # expect raise ValueError
     with pytest.raises(ValueError) as exc_info:
         await remove("", session_id)
+
+@pytest.mark.asyncio
+async def test_remove():
+    await create_session_in_cache(user_id)
+    await create_session_in_cache(user_id)
+
+    result = await remove(user_id)
+    print(result)
+
+    assert result > 1
 
 @pytest.mark.asyncio
 async def test_retrieve_by_userid():
