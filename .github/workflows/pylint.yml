@@ -1,4 +1,4 @@
-name: Pylint diff Python versions
+name: Pylint with various Python versions
 
 on: [push]
 
@@ -31,4 +31,4 @@ jobs:
 
     - name: Analysing the code with pylint
       run: |
-        pylint --exit-zero -d C0301 "./app"
+        pylint --exit-zero -d C0301 --output-format=text:pylint_score.txt,colorized "./app"
