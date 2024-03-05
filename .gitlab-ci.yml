@@ -30,7 +30,7 @@ pylint:
     - pip install pylint-gitlab
 
     #C0301 - line-too-long
-    - pylint --exit-zero -d C0301 "./app"
+    - pylint --exit-zero -d C0301 --output-format=text:pylint_score.txt,colorized "./app"
   tags:
     - docker
   except:
