@@ -1,5 +1,6 @@
 import pytest
 import uuid
+import asyncio
 import random
 from typing import Optional
 from datetime import datetime, timedelta
@@ -88,6 +89,35 @@ async def test_exists():
     assert result is True
 
 @pytest.mark.asyncio
+async def test_expiration():
+    """
+    Test session expiration.
+
+    This test checks if a session expires after the specified time-to-live (TTL).
+    The expected result is False since the session should have expired.
+    """
+    # Generate a new session ID for testing
+    test_session_id = "session-" + str(uuid.uuid4())[8:]
+
+    # Create a new session with a TTL of 3 seconds
+    await create_session_in_cache(user_id, test_session_id, ttl=3)
+
+    # Call the function with a user_id and session_id
+    result = await exists(user_id, test_session_id)
+
+    # Assert that the result is True, indicating the session exists
+    assert result is True
+
+    # Wait for the session to expire
+    await asyncio.sleep(5)
+
+    # Call the function with a user_id and session_id
+    result = await exists(user_id, test_session_id)
+
+    # Assert that the result is False, indicating the session has expired
+    assert result is False
+
+@pytest.mark.asyncio
 async def test_update_last_activity():
     """
     Test the update_last_activity function.
@@ -134,7 +164,7 @@ async def test_remove():
     assert result == 1
 
     # expect raise ValueError because no user_id is provided
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValueError):
         await remove("", session_id)
 
 @pytest.mark.asyncio
