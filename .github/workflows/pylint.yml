@@ -22,5 +22,4 @@ jobs:
         python -m poetry install --only main
     - name: Analysing the code with pylint
       run: |
-        # pylint $(git ls-files '*.py')
         pylint --exit-zero -d C0301 "./app"
