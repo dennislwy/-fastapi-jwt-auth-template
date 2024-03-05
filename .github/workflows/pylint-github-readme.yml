@@ -3,51 +3,10 @@ name: Pylint
 on: [push, pull_request]
 
 jobs:
-  export-requirements-txt:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: divideprojects/poetry-export-requirements-action@v1
-      with:
-        without-hashes: true
-        outfile-name: requirements.txt
-    - name: Upload requirements.txt
-      uses: actions/upload-artifact@v4
-      with:
-        name: requirements_txt
-        path: requirements.txt
-
   lint:
-    needs: export-requirements-txt
     runs-on: ubuntu-latest
     steps:
-      # - uses: actions/checkout@v4
-
-      # - name: Set up Python ${{ matrix.python-version }}
-      #   uses: actions/setup-python@v4
-      #   with:
-      #     python-version: "3.9"
-
-      # - name: Install poetry
-      #   uses: abatilo/actions-poetry@v2
-
-      # - name: Setup a local virtual environment (if no poetry.toml file)
-      #   run: |
-      #     poetry config virtualenvs.create true --local
-      #     poetry config virtualenvs.in-project true --local
-
-      # - name: Install the project dependencies
-      #   run: poetry install --only main
-
-      # - name: Export requirements.txt
-      #   run: poetry export -f requirements.txt --output requirements.txt
-
-      - name: Download requirements-txt
-        uses: actions/download-artifact@v4
-        with:
-          name: requirements_txt
-
-      - name: Lint with PyLint
+      - name: Pylint and add score to README.md
         uses: Silleellie/pylint-github-action@v2
         with:
           # Path of the package(s) or python file(s) to lint, relative to the repository root.
@@ -67,10 +26,3 @@ jobs:
           #
           # Required
           python-version: "3.9"
-
-          # Path of the requirements of your project, relative to the repository root.
-          # This can be easily changed in case you have `requirements-dev.txt`
-          #
-          # Optional, Default: requirements.txt
-          # requirements-path: requirements.txt
-          # requirements-path: requirements.txt
