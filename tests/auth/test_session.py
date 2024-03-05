@@ -97,14 +97,23 @@ async def test_update_last_activity():
         print("Session not exists, creating session in cache...")
         await create_session_in_cache(user_id=user_id, session_id=session_id)
 
-    # Create a payload with the user_id and session_id
-    payload = {"sub": user_id, "sid": session_id}
+    # Create a valid token payload
+    token_payload = {"sub": user_id, "sid": session_id}
 
-    # Call the function with the payload
-    result = await update_last_activity(payload)
+    # update existing session last activity
+    result = await update_last_activity(token_payload)
 
     # Assert that the result is True, indicating the session was successfully updated
     assert result is True
+
+    # Create a invalid token payload (fake session id)
+    token_payload = {"sub": user_id, "sid": "session-" + str(uuid.uuid4())[8:]}
+
+    # update non-existing session last activity
+    result = await update_last_activity(token_payload)
+
+    # Assert that the result is False, indicating the session was not updated
+    assert result is False
 
 @pytest.mark.asyncio
 async def test_remove():
@@ -119,6 +128,10 @@ async def test_remove():
 
     # Assert that the result is 1, indicating one session was successfully removed
     assert result == 1
+
+    # expect raise ValueError
+    with pytest.raises(ValueError) as exc_info:
+        await remove("", session_id)
 
 @pytest.mark.asyncio
 async def test_retrieve_by_userid():

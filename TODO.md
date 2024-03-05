@@ -1,22 +1,21 @@
 # TODO List
 ## General
 - [x] add code coverage to SonarQube
-- [x] add SonarQube quality gate badge
-- [x] add code coverage score badge
-- [ ] add pylint score badge in Github
+- [x] add SonarQube quality gate & code coverage score badge at README.md
+- [x] add pylint & pytest Github workflows
 
 ## Auth
 - [ ] when login, allow "Remember me"
-    - No remember me, access token expiry in 15mins, refresh token expiry in 1 hour
-    - Remember me, access token expiry in 1 day, refresh token expiry in 2 weeks
+    - No remember me, access token expiry in `15mins`, refresh token expiry in `1 hour`
+    - Remember me, access token expiry in `1 day`, refresh token expiry in `2 weeks`
 - [ ] Token revocation
     - when user logged out, session will be revoked. Tokens of same session will be denied access.
     - active session info will be store in cache & database (same expiry time as the refresh token)
         - session cache
-        - key: {user_id}{session_id}, value: SessionInfo
+        - key: `{user_id}{session_id}`, value: `SessionInfo`
     - valid tokens (whitelist tokens) will be store in cache (same expiry as the related token)
       - active token cache
-        - key: {token_jti}, value: {"type": "access token", "sibling_id": "jti of sibling"}
+        - key: `{token_jti}`, value: `{"type": "access token", "sibling_id": "jti of sibling"}`
         - expiry same as the token
 - [ ] Token reply attack prevention
     - when user refreshes tokens, old tokens (access & refresh token) will be revoked. Refresh token are for single use only
