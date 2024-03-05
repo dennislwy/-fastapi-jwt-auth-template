@@ -32,7 +32,7 @@ jobs:
           path: ./.venv
           key: venv-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
 
-      - name: Install the project dependencies
+      - name: Install project dependencies
         run: poetry install --with test
 
       - name: Run unit tests
