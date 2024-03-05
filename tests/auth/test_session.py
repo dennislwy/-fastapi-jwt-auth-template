@@ -139,13 +139,25 @@ async def test_remove():
 
 @pytest.mark.asyncio
 async def test_remove_all_user_sessions():
+    """
+    Test the functionality of removing all user sessions.
+
+    This test function first creates two sessions for a user in the cache.
+    Then it calls the remove function to delete all sessions of the user.
+    The result should be greater than 1, indicating that more than one session was removed.
+
+    Raises:
+        AssertionError: If the result is not greater than 1, the test will fail.
+    """
+    # Create two sessions for the user in the cache
     await create_session_in_cache(user_id)
     await create_session_in_cache(user_id)
 
+    # Call the remove function to delete all sessions of the user
     result = await remove(user_id)
-    print(result)
 
-    assert result > 1
+    # Assert that the result is greater than 2, indicating that more than one session was removed
+    assert result >= 2
 
 @pytest.mark.asyncio
 async def test_retrieve_by_userid():
@@ -170,7 +182,7 @@ async def test_retrieve_by_userid():
 
     # Assert that the sessions dictionary is not empty
     assert sessions
-    print(sessions)
+    # print(sessions)
 
     # Assert that the sessions dictionary contains the user_id
     assert user_id in sessions
@@ -197,7 +209,7 @@ async def test_retrieve():
 
     # Call the function with the user_id and session_id
     session = await retrieve(user_id, session_id)
-    print(session)
+    # print(session)
 
     # Assert that the session is not None
     assert session

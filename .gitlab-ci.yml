@@ -43,7 +43,7 @@ pytest:
   script:
     - source .venv/bin/activate
     - pip install pytest pytest-asyncio pytest-cov
-    - python -m pytest tests -v --cov=app --cov-report=xml:coverage-reports/coverage.xml
+    - python -m pytest tests -v -s --cov=app --cov-report=xml:coverage-reports/coverage.xml
   artifacts:
     paths:
       - coverage-reports/
