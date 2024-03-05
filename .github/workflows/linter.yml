@@ -4,13 +4,10 @@ on: [push, pull_request]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: Silleellie/pylint-github-action@v2
       with:
-
         # Path of the package(s) or python file(s) to lint, relative to the repository root.
         # If more than one package (or python file) should be linted, simply specify all of them
         # with the multi-line notation like so:
@@ -34,6 +31,7 @@ jobs:
         #
         # Optional, Default: requirements.txt
         # requirements-path: requirements.txt
+        requirements-path:
 
         # Path of the README.md to update with the pylint badge, relative to the repository root.
         #
