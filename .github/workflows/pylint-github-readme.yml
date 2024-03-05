@@ -13,6 +13,7 @@ jobs:
         outfile-name: requirements.txt
 
   lint:
+    needs: export-requirements-txt
     runs-on: ubuntu-latest
     steps:
       # - uses: actions/checkout@v4
