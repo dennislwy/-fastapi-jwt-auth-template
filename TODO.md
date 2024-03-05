@@ -1,5 +1,9 @@
 # TODO List
 ## General
+- [x] add code coverage to SonarQube
+- [x] add SonarQube quality gate badge
+- [x] add code coverage score badge
+- [ ] add pylint score badge in Github
 
 ## Auth
 - [ ] when login, allow "Remember me"
