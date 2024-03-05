@@ -133,12 +133,12 @@ async def test_remove():
     # Assert that the result is 1, indicating one session was successfully removed
     assert result == 1
 
-    # expect raise ValueError
+    # expect raise ValueError because no user_id is provided
     with pytest.raises(ValueError) as exc_info:
         await remove("", session_id)
 
 @pytest.mark.asyncio
-async def test_remove():
+async def test_remove_all_user_sessions():
     await create_session_in_cache(user_id)
     await create_session_in_cache(user_id)
 
