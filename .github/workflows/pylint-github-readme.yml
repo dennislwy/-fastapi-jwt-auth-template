@@ -1,4 +1,4 @@
-name: Pylint
+name: Pylint and add score to README.md
 
 on: [push, pull_request]
 
@@ -6,8 +6,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Pylint and add score to README.md
-        uses: Silleellie/pylint-github-action@v2
+      - uses: Silleellie/pylint-github-action@v2
         with:
           # Path of the package(s) or python file(s) to lint, relative to the repository root.
           # If more than one package (or python file) should be linted, simply specify all of them
