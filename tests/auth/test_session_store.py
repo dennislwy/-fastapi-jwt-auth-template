@@ -256,7 +256,7 @@ async def test_retrieve():
     assert session.session_id == session_id
 
 @pytest.mark.asyncio
-async def test_update():
+async def test_update1():
     """
     Test the update function.
 
@@ -291,6 +291,72 @@ async def test_update():
 
     # Wait for the session to expire
     await asyncio.sleep(5)
+    result = await session_store.exists(user_id, session_id)
+    # Assert that the result is False, indicating the session has expired
+    assert result is False
+
+@pytest.mark.asyncio
+async def test_update2():
+    """
+    Test the update function.
+
+    This test checks if a session can be successfully updated in the cache.
+    It first ensures the session exists, then updates the session and checks the result.
+    """
+    # Check if the session exists, if not create a new session
+    if not await session_store.exists(user_id, session_id):
+        print("Session not exists, creating session in cache...")
+        await create_session_in_cache(user_id=user_id, session_id=session_id)
+
+    # Generate a new user agent for testing
+    new_user_agent = "Mars/12.0.0"
+
+    # Retrieve the session from the cache
+    session: SessionInfo = await session_store.retrieve(user_id, session_id)
+
+    # Update the user agent
+    session.user_agent = new_user_agent
+
+    # Update the session in the cache
+    result = await session_store.update(user_id, session_id, session)
+
+    # Assert that the result is True, indicating the session was successfully updated
+    assert result is True
+
+    # Retrieve the session from the cache
+    session: SessionInfo = await session_store.retrieve(user_id, session_id)
+
+    # Assert that the user agent has been updated
+    assert session.user_agent == new_user_agent
+
+@pytest.mark.asyncio
+async def test_update_ttl():
+    """
+    Test the update_ttl function.
+
+    This test checks if the time-to-live (TTL) of a session can be successfully updated in the cache.
+    It first ensures the session exists, then updates the TTL of the session and checks the result.
+    """
+    # Check if the session exists, if not create a new session
+    if not await session_store.exists(user_id, session_id):
+        print("Session not exists, creating session in cache...")
+        await create_session_in_cache(user_id=user_id, session_id=session_id)
+
+    # Update the TTL of the session
+    result = await session_store.update_ttl(user_id, session_id, 5)
+
+    # Assert that the result is True, indicating the TTL was successfully updated
+    assert result is True
+
+    # Wait 4s
+    await asyncio.sleep(4)
+    # check is the session exists
+    result = await session_store.exists(user_id, session_id)
+    # Assert that the result is True, indicating the session still exists
+    assert result is True
+
+    # Wait for the session to expire
+    await asyncio.sleep(1)
     result = await session_store.exists(user_id, session_id)
     # Assert that the result is False, indicating the session has expired
     assert result is False
