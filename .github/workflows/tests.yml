@@ -36,4 +36,4 @@ jobs:
         run: poetry install --with test
 
       - name: Run unit tests
-        run: poetry run pytest tests -s -vvv
+        run: poetry -s -vvvv -l --tb=long tests
