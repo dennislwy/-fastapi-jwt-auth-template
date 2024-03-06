@@ -8,7 +8,8 @@
 - [ ] when login, allow "Remember me"
     - No remember me, access token expiry in `15mins`, refresh token expiry in `1 hour`
     - Remember me, access token expiry in `1 day`, refresh token expiry in `2 weeks`
-- [ ] Token revocation
+    - remember me info should store in session cache
+- [x] Token revocation
     - when user logged out, session will be revoked. Tokens of same session will be denied access.
     - active session info will be store in cache & database (same expiry time as the refresh token)
         - session cache
@@ -17,15 +18,15 @@
       - active token cache
         - key: `{token_jti}`, value: `{"type": "access token", "sibling_id": "jti of sibling"}`
         - expiry same as the token
-- [ ] Token reply attack prevention
+- [x] Token reply attack prevention
     - when user refreshes tokens, old tokens (access & refresh token) will be revoked. Refresh token are for single use only
-- [ ] Token reuse attack prevention
+- [x] Token reuse attack prevention
     - As security measures, session will be revoke if revoked token was reused
 
 ## Login
-- [ ] `/login`, get JWT tokens
-- [ ] `/logout`, revoke session
-- [ ] `/refresh`, refresh JWT tokens
+- [x] `/login`, get JWT tokens
+- [x] `/logout`, revoke session
+- [x] `/refresh`, refresh JWT tokens
 - [ ] Password management
     - [ ] `/change-password`
     - [ ] `/forgot-password`, send password reset magic link to user email

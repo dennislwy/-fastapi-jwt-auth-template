@@ -17,7 +17,8 @@ from app.config import settings
 from app.auth import session_store
 from app.token import token_store
 from app.utils import get_current_epoch
-from app.token import get_valid_access_token
+from app.token import get_valid_access_token, get_valid_refresh_token
+from app.user import get_user_by_id
 from .schemas import TokensResponse, SessionInfo
 from .utils import authenticate_user, hash_password, create_token
 
@@ -60,6 +61,49 @@ async def register_user(request: UserCreateRequest, db: Annotated[AsyncSession, 
     await db.commit()
     await db.refresh(new_user)
     return new_user
+
+# refresh tokens (access and refresh token) using valid refresh token
+@r.post("/refresh", response_model=TokensResponse)
+async def refresh_tokens(token_payload: Annotated[dict, Depends(get_valid_refresh_token)],
+                         db: Annotated[AsyncSession, Depends(get_db)]) -> TokensResponse:
+
+    session_id: str = token_payload.get("sid")
+    user_id: str = token_payload.get("sub")
+    token_id: str = token_payload.get("jti")
+
+    # get user info by user id
+    user = await get_user_by_id(user_id, db)
+
+    # TODO: token TTL should obtain from session cache
+    # tokens time-to-live
+    access_token_expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    refresh_token_expires_delta = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+
+    # create access token
+    access_token = create_token(
+        data={"sub": user_id, "email": user.email, "sid": session_id},
+        expires_delta=access_token_expires_delta)
+    print(f"Created access token: {access_token['token']}, " +
+          f"exp: {access_token['payload']['exp']}")
+
+    # create refresh token
+    refresh_token = create_token(
+        data={"sub": user_id, "sid": session_id},
+        expires_delta=refresh_token_expires_delta)
+    print(f"Created refresh token: {refresh_token['token']}, " +
+          f"exp: {refresh_token['payload']['exp']}")
+
+    # add token IDs to token store
+    await _add_tokens_to_store(access_token_id=access_token['payload']['jti'],
+                               access_token_ttl=access_token_expires_delta.seconds,
+                               refresh_token_id=refresh_token['payload']['jti'],
+                               refresh_token_ttl=refresh_token_expires_delta.seconds)
+
+    # revoking old tokens (Prevent token reply attack, refresh token is for single-use only)
+    await token_store.remove_with_sibling(token_id)
+
+    # Return the access token, refresh token, and token type
+    return TokensResponse(access_token=access_token['token'], refresh_token=refresh_token['token'])
 
 @r.post("/login", response_model=TokensResponse)
 async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -113,13 +157,13 @@ async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm
     access_token = create_token(
         data={"sub": user_id, "email": user.email, "sid": session_id},
         expires_delta=access_token_expires_delta)
-    print(f"access_token: {access_token['token']}, exp: {access_token['payload']['exp']}")
+    print(f"Created access token: {access_token['token']}, exp: {access_token['payload']['exp']}")
 
     # create refresh token
     refresh_token = create_token(
         data={"sub": user_id, "sid": session_id},
         expires_delta=refresh_token_expires_delta)
-    print(f"refresh_token: {refresh_token['token']}, exp: {refresh_token['payload']['exp']}")
+    print(f"Created refresh token: {refresh_token['token']}, exp: {refresh_token['payload']['exp']}")
 
     # Obtain user browser information
     user_agent = str(request.headers["User-Agent"])
@@ -161,11 +205,8 @@ async def logout(token_payload: Annotated[dict, Depends(get_valid_access_token)]
     # revoke session
     await session_store.remove(user_id, session_id)
 
-    # revoke tokens
-    sibling_token_id = await token_store.retrieve(token_id)
-    await token_store.remove(token_id)
-    if sibling_token_id:
-        await token_store.remove(sibling_token_id)
+    # revoke access & refresh token
+    await token_store.remove_with_sibling(token_id)
 
     return {"message": "Successfully logged out"}
 
@@ -217,4 +258,4 @@ async def _add_session_to_store(
                                exp=get_current_epoch() + ttl)
 
     # add session id to sessions cache, expiry time = refresh token expiry time
-    return await session_store.add(user_id=user_id, session_id=session_id, value=session_info, ttl=ttl)
+    return await session_store.add(user_id, session_id, session_info, ttl)

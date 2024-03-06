@@ -80,23 +80,23 @@ async def _decode_and_validate_token(token: str, token_type: str) -> Dict[str, A
                                 detail="Invalid token type, refresh token was expected")
 
         # check if the token's session is in active session cache
-        user_id = payload.get("sub")
-        session_id = payload.get("sid")
+        user_id: str = payload.get("sub")
+        session_id: str = payload.get("sid")
 
         if not await session_store.exists(user_id=user_id, session_id=session_id):
             raise HTTPException(status_code=status_code, detail="Session was revoked or expired")
 
         # check if the token is in active token cache
-        token_id = payload.get("jti")
+        token_id: str = payload.get("jti")
 
         if not await token_store.exists(token_id=token_id):
             # for security measures, revoke token's session as well
-            print(f"{token_type} token '{token_id}' was revoked or expired, removing session" +
-                  f"'{session_id}' as security measure")
+            print(f"{token_type.capitalize()} token '{token_id}' was revoked or expired, " +
+                  f"removing session '{session_id}' as security measure")
             await session_store.remove(user_id=user_id, session_id=session_id)
 
             raise HTTPException(status_code=status_code,
-                                detail="Access token was revoked or expired")
+                                detail=f"{token_type.capitalize()} token was revoked or expired")
 
         return payload
 

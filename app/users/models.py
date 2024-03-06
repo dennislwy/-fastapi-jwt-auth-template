@@ -8,7 +8,6 @@ class User(Base):
     __tablename__ = "user"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4(), index=True)
-    # id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(60), nullable=False)

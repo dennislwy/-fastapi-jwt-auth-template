@@ -49,7 +49,6 @@ async def retrieve(token_id: str) -> Optional[str]:
     """
     return await cache.get(key=token_id)
 
-
 async def remove(token_id: str) -> bool:
     """
     Remove a token from the cache store.
@@ -62,3 +61,19 @@ async def remove(token_id: str) -> bool:
     """
     print(f"Removing token '{token_id}' from token store")
     return await cache.delete(key=token_id)
+
+async def remove_with_sibling(token_id: str) -> bool:
+    """
+    Remove a token and its sibling from the cache store.
+
+    Args:
+        token_id (str): The ID of the token.
+
+    Returns:
+        bool: True if the token and its sibling were successfully removed from the store, False otherwise.
+    """
+    print(f"Removing token '{token_id}' and its sibling from token store")
+    sibling_token_id = await retrieve(token_id)
+    if sibling_token_id:
+        await remove(sibling_token_id)
+    return await remove(token_id)

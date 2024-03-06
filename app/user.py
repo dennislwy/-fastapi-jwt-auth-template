@@ -2,9 +2,16 @@ from typing import Annotated
 from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
+from aiocache import SimpleMemoryCache
 from app.users.models import User
 from app.database import get_db, AsyncSession
 from app.token import get_valid_access_token
+
+# Use memory cache to cache User objects
+# key: {user_id}
+# value: User
+cache = SimpleMemoryCache()
+cache_ttl = 300
 
 async def current_user(token_payload: Annotated[dict, Depends(get_valid_access_token)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> User:
@@ -50,10 +57,11 @@ async def get_current_user(token_payload: Annotated[dict, Depends(get_valid_acce
         superuser (bool, optional): Filter users by superuser status. Defaults to False.
 
     Returns:
-        User: The current user.
+        User: The user object.
 
     Raises:
-        HTTPException: If the token is invalid or there is an error while decoding it.
+        HTTPException: If the token invalid, user is not found, is inactive,
+        unverified, or not a superuser.
     """
     status_code = status.HTTP_401_UNAUTHORIZED
 
@@ -90,27 +98,67 @@ async def get_current_user(token_payload: Annotated[dict, Depends(get_valid_acce
 
 async def get_user_by_id(user_id: str, db: Annotated[AsyncSession, Depends(get_db)]) -> User:
     """
-    Retrieve a user from the database based on the provided user_id.
+    Retrieve a user by their ID.
 
     Args:
         user_id (str): The ID of the user to retrieve.
-        db (AsyncSession): The database async session.
+        db (AsyncSession): The database session.
 
     Returns:
-        User: The retrieved user object or None if no user is found.
+        User: The user object.
+
+    Raises:
+        None
+
     """
-    return await db.get(User, UUID(user_id))
+    # Retrieve the user from the cache
+    user: User = await cache.get(key=user_id)
+
+    # if the user is not in the cache, retrieve the user from the database
+    if user is None:
+        # Retrieve the user from the database
+        user = await db.get(User, UUID(user_id))
+
+        print(f"Retrieved user '{user_id}' from database")
+
+        # Cache the user object
+        await cache.add(key=user_id, value=user, ttl=cache_ttl)
+    else:
+        print(f"Retrieved user '{user_id}' from cache")
+
+    # Return the user object
+    return user
 
 async def get_user_by_email(email: str, db: Annotated[AsyncSession, Depends(get_db)]) -> User:
     """
-    Retrieve a user from the database based on the provided email.
+    Retrieve a user by their email address.
 
     Args:
-        email (str, optional): The email of the user to retrieve
-        db (AsyncSession): The database async session.
+        email (str): The email address of the user.
+        db (AsyncSession): The database session.
 
     Returns:
-        User: The retrieved user object or None if no user is found.
+        User: The user object.
+
+    Raises:
+        None
+
     """
-    result = await db.execute(select(User).where(User.email == email))
-    return result.scalar()
+    # Retrieve the user from the cache
+    user: User = await cache.get(key=email)
+
+    # if the user is not in the cache, retrieve the user from the database
+    if user is None:
+        # Retrieve the user from the database
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalar()
+
+        print(f"Retrieved user '{email}' from database")
+
+        # Cache the user object
+        await cache.add(key=email, value=user, ttl=cache_ttl)
+    else:
+        print(f"Retrieved user '{email}' from cache")
+
+    # Return the user object
+    return user
