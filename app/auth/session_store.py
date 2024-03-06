@@ -24,6 +24,7 @@ async def add(user_id: str, session_id: str, value, ttl: int) -> bool:
     Returns:
         bool: True if the session was successfully added to the store, False otherwise.
     """
+    print(f"Adding session '{user_id}:{session_id}' to session store, TTL: {ttl} seconds")
     return await cache.add(key=session_id, value=value, namespace=user_id, ttl=ttl)
 
 async def exists(user_id: str, session_id: str) -> bool:
@@ -97,6 +98,42 @@ async def retrieve_by_userid(
     # Return the dictionary of sessions
     return sessions
 
+async def update(user_id: str, session_id: str, value, ttl: Optional[int] = None) -> bool:
+    """
+    Update a user session in the cache store.
+
+    Args:
+        user_id (str): The ID of the user.
+        session_id (str): The ID of the user session.
+        value (Any): The value object.
+        ttl (Optional[int]): The time-to-live (TTL) for the user session in seconds. If not
+        provided, the TTL will not be updated.
+
+    Returns:
+        bool: True if the session was successfully updated, False otherwise.
+    """
+    if ttl:
+        print(f"Updating session '{user_id}:{session_id}' in session store, TTL: {ttl} seconds")
+        return await cache.set(key=session_id, value=value, namespace=user_id, ttl=ttl)
+
+    print(f"Updating session '{user_id}:{session_id}' in session store")
+    return await cache.set(key=session_id, value=value, namespace=user_id)
+
+async def update_ttl(user_id: str, session_id: str, ttl: int):
+    """
+    Update the time-to-live (TTL) of a user session in the cache store.
+
+    Args:
+        user_id (str): The ID of the user.
+        session_id (str): The ID of the user session.
+        ttl (int): number of seconds for expiration. If 0, ttl is disabled
+
+    Returns:
+        bool: True if the session TTL was successfully updated, False otherwise.
+    """
+    print(f"Updating TTL of session '{user_id}:{session_id}' in session store")
+    return await cache.expire(key=session_id, namespace=user_id, ttl=ttl)
+
 async def update_last_activity(token_payload: dict) -> bool:
     """
     Update the last activity timestamp of the user session.
@@ -148,6 +185,8 @@ async def remove(user_id: str, session_id: Optional[str] = None) -> int:
     result = 0
 
     if session_id:
+        print(f"Removing session '{user_id}:{session_id}' from session store")
+
         # delete the specific user session of the user
         result = await cache.delete(key=session_id, namespace=user_id)
 
@@ -155,6 +194,7 @@ async def remove(user_id: str, session_id: Optional[str] = None) -> int:
         # delete all sessions of the user
         sessions = await retrieve_by_userid(user_id=user_id, sort=False)
         for session in sessions[user_id]:
+            print(f"Removing session '{user_id}:{session.session_id}' from session store")
             result += await cache.delete(key=session.session_id, namespace=user_id)
 
     return result

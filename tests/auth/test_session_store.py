@@ -102,18 +102,22 @@ async def test_expiration():
     # Create a new session with a TTL of 3 seconds
     await create_session_in_cache(user_id, test_session_id, ttl=3)
 
-    # Call the function with a user_id and session_id
+    # check is the session exists
     result = await exists(user_id, test_session_id)
-
     # Assert that the result is True, indicating the session exists
+    assert result is True
+
+    # Wait 2s
+    await asyncio.sleep(2)
+    # check is the session exists
+    result = await exists(user_id, test_session_id)
+    # Assert that the result is True, indicating the session still exists
     assert result is True
 
     # Wait for the session to expire
     await asyncio.sleep(5)
-
-    # Call the function with a user_id and session_id
+    # check is the session exists
     result = await exists(user_id, test_session_id)
-
     # Assert that the result is False, indicating the session has expired
     assert result is False
 
