@@ -45,18 +45,17 @@ async def get_token_payload(token: Annotated[str, Depends(oauth2_scheme)]) -> Di
         session_id = payload.get("sid")
 
         if not await session_store.exists(user_id=user_id, session_id=session_id):
-            raise HTTPException(status_code=status_code,
-                                detail="Session was revoked or expired")
+            raise HTTPException(status_code=status_code, detail="Session was revoked or expired")
 
         # check if the token is in active token cache
         token_id = payload.get("jti")
 
         if not await token_store.exists(token_id=token_id):
             # for security measures, revoke token's session as well
+            print(f"Token '{token_id}' was revoked or expired, removing session '{session_id}' as security measure")
             await session_store.remove(user_id=user_id, session_id=session_id)
 
-            raise HTTPException(status_code=status_code,
-                                detail="Token was revoked or expired")
+            raise HTTPException(status_code=status_code, detail="Token was revoked or expired")
 
         return payload
 

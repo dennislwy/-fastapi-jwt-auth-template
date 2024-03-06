@@ -21,7 +21,9 @@ async def add(token_id: str, sibling_token_id: str, ttl: int) -> bool:
     Returns:
         bool: True if the token was successfully added to the store, False otherwise.
     """
+    print(f"Adding token '{token_id}' to store, value '{sibling_token_id}'")
     return await cache.add(key=token_id, value=sibling_token_id, ttl=ttl)
+
 
 async def exists(token_id: str) -> bool:
     """
@@ -58,4 +60,5 @@ async def remove(token_id: str) -> bool:
     Returns:
         bool: True if the token was successfully removed from the store, False otherwise.
     """
+    print(f"Removing token '{token_id}' from token store")
     return await cache.delete(key=token_id)
