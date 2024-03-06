@@ -51,7 +51,7 @@ async def authenticate_user(email: str, password: str, db: AsyncSession):
     return user
 
 
-def create_token(data: dict, expires_delta: timedelta) -> str:
+def create_token(data: dict, expires_delta: timedelta) -> dict:
     """
     Create a JSON Web Token (JWT) with the given dictionary data and expiration delta.
 
@@ -60,17 +60,27 @@ def create_token(data: dict, expires_delta: timedelta) -> str:
         expires_delta (timedelta): The expiration time delta for the token.
 
     Returns:
-        str: The encoded JWT.
-
+        dict: The token and its payload.
     """
+    # Copy the input data to avoid modifying the original dictionary
     to_encode = data.copy()
+
+    # If an expiration delta is provided, calculate the expiration time by adding it to the current time
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
+
+    # If no expiration delta is provided, use the default token expiration time
     else:
         expire = datetime.utcnow() + timedelta(minutes=DEFAULT_TOKEN_EXPIRE_MINUTES)
 
+    # Add a unique identifier to the token data
     to_encode.update({"jti": str(uuid.uuid4())})
+    # Add the expiration time to the token data
     to_encode.update({"exp": expire})
+    # Add the issued at time to the token data
     to_encode.update({"iat": datetime.utcnow()})
 
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return {
+        'token': jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM),
+        'payload': to_encode
+        }
