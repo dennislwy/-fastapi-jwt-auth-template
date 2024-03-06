@@ -30,10 +30,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./.venv
-          key: venv-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
+          key: venv-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}
 
       - name: Install project dependencies
         run: poetry install --with test
 
       - name: Run unit tests
-        run: poetry run pytest tests -v -s
+        run: poetry run pytest tests -s -vvv
