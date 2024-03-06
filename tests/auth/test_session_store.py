@@ -4,7 +4,7 @@ import asyncio
 import random
 from typing import Optional
 from datetime import datetime, timedelta
-from app.auth.session import add, exists, update_last_activity, remove, retrieve_by_userid, retrieve
+from app.auth.session_store import add, exists, update_last_activity, remove, retrieve_by_userid, retrieve
 from app.auth.schemas import SessionInfo
 
 user_id = "user-" + str(uuid.uuid4())[5:]

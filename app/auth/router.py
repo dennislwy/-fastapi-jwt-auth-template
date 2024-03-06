@@ -8,7 +8,7 @@ from app.users.schemas import UserCreateRequest
 from app.database import get_db, AsyncSession
 from app.users.models import User
 from app.config import settings
-from app.auth import session
+from app.auth import session_store
 from app.utils import get_current_epoch
 from .schemas import TokensResponse, SessionInfo
 from .utils import authenticate_user, hash_password, create_token
@@ -144,7 +144,7 @@ async def create_session(user_id: str, session_id: str, user_agent: str, user_ho
     # add session id to sessions cache, expiry time = refresh token expiry time
     print(f"Adding '{user_id}:{session_id}' to active sessions cache")
 
-    return await session.add(user_id=user_id, session_id=session_id, value=session_info, ttl=ttl)
+    return await session_store.add(user_id=user_id, session_id=session_id, value=session_info, ttl=ttl)
 
 @r.post("/logout")
 async def logout(token: str = Depends(oauth2_scheme)):
@@ -163,6 +163,6 @@ async def logout(token: str = Depends(oauth2_scheme)):
     session_id: str = payload.get("sid")
 
     # revoke session
-    await session.remove(user_id, session_id)
+    await session_store.remove(user_id, session_id)
 
     return {"message": "Successfully logged out"}

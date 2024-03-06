@@ -2,7 +2,7 @@ from typing import List
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from app.config import settings
-from app.auth import session
+from app.auth import session_store
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = settings.ALGORITHM
@@ -21,12 +21,13 @@ async def validate_access_token(token: str):
         HTTPException: If the access token is invalid or the validation fails.
     """
     try:
+        # Set the options for the JWT token validation
+        options = {
+            "require_exp": True, "require_sub": True, "require_jti": True, "require_sid": True
+            }
+
         # Decode the token and validate the payload claims
-        payload = jwt.decode(token, SECRET_KEY,
-                             algorithms=[ALGORITHM],
-                             options=dict(require_sub=True,
-                                          require_exp=True,
-                                          require_jti=True))
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options=options)
 
         # token must contains 'email' & 'sid' claims
         _validate_claim(payload, ["email", "sid"])
@@ -38,7 +39,7 @@ async def validate_access_token(token: str):
         # await _validate_token_revocation(payload)
 
         # update user session last activity timestamp
-        await session.update_last_activity(payload)
+        await session_store.update_last_activity(payload)
 
         # return the payload of the token
         return payload
@@ -78,7 +79,7 @@ async def _validate_session_revocation(payload: dict):
     session_id = payload.get("sid")
 
     # session considered as revoked or expired if not found in the sessions cache
-    if not await session.exists(user_id=user_id, session_id=session_id):
+    if not await session_store.exists(user_id=user_id, session_id=session_id):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Session was revoked or expired")
 
