@@ -1,3 +1,9 @@
+"""
+This module contains the router for authentication-related endpoints.
+
+It includes routes for user registration, user login, user logout, and other authentication-related operations.
+"""
+
 import uuid
 from typing import Annotated
 from datetime import datetime, timedelta
@@ -11,9 +17,9 @@ from app.config import settings
 from app.auth import session_store
 from app.token import token_store
 from app.utils import get_current_epoch
+from app.token import get_valid_access_token
 from .schemas import TokensResponse, SessionInfo
 from .utils import authenticate_user, hash_password, create_token
-from app.token import get_token_payload
 
 router = r = APIRouter()
 
@@ -70,7 +76,8 @@ async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm
         TokensResponse: The response containing the access token, refresh token, and token type.
 
     Raises:
-        HTTPException: If the username or password is incorrect, the user is inactive, or the user is unverified.
+        HTTPException: If the username or password is incorrect, the user is inactive, or the
+        user is unverified.
     """
     user = await authenticate_user(form_data.username, form_data.password, db)
     if not user:
@@ -119,7 +126,11 @@ async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm
     user_host = request.client.host
 
     # create new session and add to session store
-    await _add_session_to_store(user_id, session_id, user_agent, user_host, refresh_token_expires_delta.seconds)
+    await _add_session_to_store(user_id,
+                                session_id,
+                                user_agent,
+                                user_host,
+                                refresh_token_expires_delta.seconds)
 
     # add token IDs to token store
     await _add_tokens_to_store(access_token_id=access_token['payload']['jti'],
@@ -131,10 +142,12 @@ async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm
     return TokensResponse(access_token=access_token['token'], refresh_token=refresh_token['token'])
 
 @r.post("/logout")
-async def logout(token_payload: Annotated[dict, Depends(get_token_payload)]):
+async def logout(token_payload: Annotated[dict, Depends(get_valid_access_token)]):
     """
-    Logs out the user by revoking the user session.
+    Logs out the user
     \f
+    User sessions, access & refresh token will be revoked.
+
     Args:
         token_payload (dict): The access token payload.
 
@@ -150,7 +163,6 @@ async def logout(token_payload: Annotated[dict, Depends(get_token_payload)]):
 
     # revoke tokens
     sibling_token_id = await token_store.retrieve(token_id)
-
     await token_store.remove(token_id)
     if sibling_token_id:
         await token_store.remove(sibling_token_id)
@@ -180,7 +192,12 @@ async def _add_tokens_to_store(
     print(f"Adding refresh token '{refresh_token_id}' to token store")
     await token_store.add(refresh_token_id, access_token_id, refresh_token_ttl)
 
-async def _add_session_to_store(user_id: str, session_id: str, user_agent: str, user_host: str, ttl: int) -> bool:
+async def _add_session_to_store(
+    user_id: str,
+    session_id: str,
+    user_agent: str,
+    user_host: str,
+    ttl: int) -> bool:
     """
     Create a new user session and add to the session store.
 

@@ -4,9 +4,9 @@ from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from app.users.models import User
 from app.database import get_db, AsyncSession
-from app.token import get_token_payload
+from app.token import get_valid_access_token
 
-async def current_user(token_payload: Annotated[dict, Depends(get_token_payload)],
+async def current_user(token_payload: Annotated[dict, Depends(get_valid_access_token)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> User:
     """
     Retrieve the current user based on the provided token.
@@ -20,7 +20,7 @@ async def current_user(token_payload: Annotated[dict, Depends(get_token_payload)
     """
     return await get_current_user(token_payload, db)
 
-async def current_active_user(token_payload: Annotated[dict, Depends(get_token_payload)],
+async def current_active_user(token_payload: Annotated[dict, Depends(get_valid_access_token)],
                               db: Annotated[AsyncSession, Depends(get_db)]) -> User:
     """
     Retrieve the current active user based on the provided token.
@@ -34,7 +34,7 @@ async def current_active_user(token_payload: Annotated[dict, Depends(get_token_p
     """
     return await get_current_user(token_payload, db, active=True)
 
-async def get_current_user(token_payload: Annotated[dict, Depends(get_token_payload)],
+async def get_current_user(token_payload: Annotated[dict, Depends(get_valid_access_token)],
                            db: Annotated[AsyncSession, Depends(get_db)],
                            active: bool = False,
                            verified: bool = False,
