@@ -98,73 +98,6 @@ async def retrieve_by_userid(
     # Return the dictionary of sessions
     return sessions
 
-async def replace(user_id: str, session_id: str, value: SessionInfo, ttl: Optional[int] = None) -> bool:
-    """
-    Replace a user session in the cache store.
-
-    Args:
-        user_id (str): The ID of the user.
-        session_id (str): The ID of the user session.
-        value (SessionInfo): The SessionInfo object.
-        ttl (Optional[int]): The time-to-live (TTL) for the user session in seconds. If not
-        provided, the TTL will not be updated.
-
-    Returns:
-        bool: True if the session was successfully replaced, False otherwise.
-    """
-    if ttl:
-        print(f"Replacing session '{user_id}:{session_id}' in session store, TTL: {ttl} seconds")
-        return await cache.set(key=session_id, value=value, namespace=user_id, ttl=ttl)
-
-    print(f"Replacing session '{user_id}:{session_id}' in session store")
-    return await cache.set(key=session_id, value=value, namespace=user_id)
-
-async def update_ttl(user_id: str, session_id: str, ttl: int) -> bool:
-    """
-    Update the time-to-live (TTL) of a user session in the cache store.
-
-    Args:
-        user_id (str): The ID of the user.
-        session_id (str): The ID of the user session.
-        ttl (int): number of seconds for expiration. If 0, ttl is disabled
-
-    Returns:
-        bool: True if the session TTL was successfully updated, False otherwise.
-    """
-    print(f"Updating TTL of session '{user_id}:{session_id}' in session store")
-    return await cache.expire(key=session_id, namespace=user_id, ttl=ttl)
-
-async def remove(user_id: str, session_id: Optional[str] = None) -> int:
-    """
-    Remove sessions based on the provided user_id and session_id.
-
-    Args:
-        user_id (str): The ID of the user.
-        session_id (Optional[str]): The ID of the user session. If not provided,
-        all sessions of the user will be removed.
-
-    Returns:
-        int: The number of sessions removed.
-    """
-    if not user_id:
-        raise ValueError("user_id must be provided")
-
-    result = 0
-
-    if session_id:
-        print(f"Removing session '{user_id}:{session_id}' from session store")
-
-        # delete the specific user session of the user
-        result = await cache.delete(key=session_id, namespace=user_id)
-
-    else:
-        # delete all sessions of the user
-        sessions = await retrieve_by_userid(user_id=user_id, sort=False)
-        for session in sessions[user_id]:
-            print(f"Removing session '{user_id}:{session.session_id}' from session store")
-            result += await cache.delete(key=session.session_id, namespace=user_id)
-
-    return result
 
 async def update(user_id: str, session_id: str, data: dict, ttl: Optional[int] = None) -> bool:
     """
@@ -213,3 +146,50 @@ async def update(user_id: str, session_id: str, data: dict, ttl: Optional[int] =
 
     print(f"Updating session '{user_id}:{session_id}' in session store")
     return await cache.set(key=session_id, value=session_info, namespace=user_id)
+
+async def update_ttl(user_id: str, session_id: str, ttl: int) -> bool:
+    """
+    Update the time-to-live (TTL) of a user session in the cache store.
+
+    Args:
+        user_id (str): The ID of the user.
+        session_id (str): The ID of the user session.
+        ttl (int): number of seconds for expiration. If 0, ttl is disabled
+
+    Returns:
+        bool: True if the session TTL was successfully updated, False otherwise.
+    """
+    print(f"Updating TTL of session '{user_id}:{session_id}' in session store")
+    return await cache.expire(key=session_id, namespace=user_id, ttl=ttl)
+
+async def remove(user_id: str, session_id: Optional[str] = None) -> int:
+    """
+    Remove sessions based on the provided user_id and session_id.
+
+    Args:
+        user_id (str): The ID of the user.
+        session_id (Optional[str]): The ID of the user session. If not provided,
+        all sessions of the user will be removed.
+
+    Returns:
+        int: The number of sessions removed.
+    """
+    if not user_id:
+        raise ValueError("user_id must be provided")
+
+    result = 0
+
+    if session_id:
+        print(f"Removing session '{user_id}:{session_id}' from session store")
+
+        # delete the specific user session of the user
+        result = await cache.delete(key=session_id, namespace=user_id)
+
+    else:
+        # delete all sessions of the user
+        sessions = await retrieve_by_userid(user_id=user_id, sort=False)
+        for session in sessions[user_id]:
+            print(f"Removing session '{user_id}:{session.session_id}' from session store")
+            result += await cache.delete(key=session.session_id, namespace=user_id)
+
+    return result

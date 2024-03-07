@@ -62,6 +62,113 @@ async def register_user(request: UserCreateRequest, db: Annotated[AsyncSession, 
     await db.refresh(new_user)
     return new_user
 
+@r.post("/login", response_model=TokensResponse)
+async def login(request: Request,
+                form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+                db: Annotated[AsyncSession, Depends(get_db)],
+                remember_me: bool = False) -> TokensResponse:
+    """
+    Authenticates a user and generates access and refresh tokens.
+    \f
+    Args:
+        request (Request): The incoming request.
+        form_data (OAuth2PasswordRequestForm): The form data containing the username and password.
+        db (AsyncSession): The database session.
+        remember_me (bool): Whether to remember the user. Defaults to False.
+
+    Returns:
+        TokensResponse: The response containing the access token, refresh token, and token type.
+
+    Raises:
+        HTTPException: If the username or password is incorrect, the user is inactive, or the
+        user is unverified.
+    """
+    # authenticate user
+    user = await authenticate_user(form_data.username, form_data.password, db)
+
+    # check if user is found
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # check if user is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Inactive user"
+        )
+
+    # check if user is verified
+    if not user.is_verified and not settings.DEBUG:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Unverified user"
+        )
+
+    # generate new session id
+    session_id = str(uuid.uuid4())
+
+    # user id string
+    user_id = str(user.id)
+
+    # generate access & refresh token
+    access_token, refresh_token = await _generate_tokens(user_id,
+                                                         user.email,
+                                                         session_id,
+                                                         remember_me)
+
+    # Obtain user browser information
+    user_agent = str(request.headers["User-Agent"])
+    user_host = request.client.host
+
+    # create new session and add to session store
+    await _add_session_to_store(user_id=user_id,
+                                session_id=session_id,
+                                remember_me=remember_me,
+                                user_agent=user_agent,
+                                user_host=user_host,
+                                ttl=int(refresh_token['expires_delta'].total_seconds()))
+
+    # add token IDs to token store
+    await _add_tokens_to_store(access_token_id=access_token['payload']['jti'],
+                               access_token_ttl=int(access_token['expires_delta']
+                                                    .total_seconds()),
+                               refresh_token_id=refresh_token['payload']['jti'],
+                               refresh_token_ttl=int(refresh_token['expires_delta']
+                                                     .total_seconds()))
+
+    # Return the access token, refresh token, and token type
+    return TokensResponse(access_token=access_token['token'], refresh_token=refresh_token['token'])
+
+@r.post("/logout")
+async def logout(token_payload: Annotated[dict, Depends(get_valid_access_token)]):
+    """
+    Logs out the user
+    \f
+    User sessions, access & refresh token will be revoked.
+
+    Args:
+        token_payload (dict): The access token payload.
+
+    Returns:
+        dict: A dictionary containing the message "Successfully logged out".
+    """
+    user_id: str = token_payload.get("sub")
+    session_id: str = token_payload.get("sid")
+    token_id: str = token_payload.get("jti")
+
+    # revoke session
+    await session_store.remove(user_id, session_id)
+
+    # revoke access & refresh token
+    await token_store.remove_with_sibling(token_id)
+
+    return {"message": "Successfully logged out"}
+
+
 @r.post("/refresh", response_model=TokensResponse)
 async def refresh_tokens(request: Request,
                          token_payload: Annotated[dict, Depends(get_valid_refresh_token)],
@@ -127,106 +234,6 @@ async def refresh_tokens(request: Request,
 
     # Return the new access token, refresh token, and token type
     return TokensResponse(access_token=access_token['token'], refresh_token=refresh_token['token'])
-
-@r.post("/login", response_model=TokensResponse)
-async def login(request: Request,
-                form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-                db: Annotated[AsyncSession, Depends(get_db)],
-                remember_me: bool = False) -> TokensResponse:
-    """
-    Authenticates a user and generates access and refresh tokens.
-    \f
-    Args:
-        request (Request): The incoming request.
-        form_data (OAuth2PasswordRequestForm): The form data containing the username and password.
-        db (AsyncSession): The database session.
-        remember_me (bool): Whether to remember the user. Defaults to False.
-
-    Returns:
-        TokensResponse: The response containing the access token, refresh token, and token type.
-
-    Raises:
-        HTTPException: If the username or password is incorrect, the user is inactive, or the
-        user is unverified.
-    """
-    user = await authenticate_user(form_data.username, form_data.password, db)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Inactive user"
-        )
-
-    if not user.is_verified:
-        # raise HTTPException(
-        #     status_code=status.HTTP_403_FORBIDDEN,
-        #     detail="Unverified user"
-        # )
-        print("DEBUG: Unverified user")
-
-    # generate new session id
-    session_id = str(uuid.uuid4())
-
-    # user id string
-    user_id = str(user.id)
-
-    # generate access & refresh token
-    access_token, refresh_token = await _generate_tokens(user_id,
-                                                         user.email,
-                                                         session_id,
-                                                         remember_me)
-
-    # Obtain user browser information
-    user_agent = str(request.headers["User-Agent"])
-    user_host = request.client.host
-
-    # create new session and add to session store
-    await _add_session_to_store(user_id=user_id,
-                                session_id=session_id,
-                                remember_me=remember_me,
-                                user_agent=user_agent,
-                                user_host=user_host,
-                                ttl=int(refresh_token['expires_delta'].total_seconds()))
-
-    # add token IDs to token store
-    await _add_tokens_to_store(access_token_id=access_token['payload']['jti'],
-                               access_token_ttl=int(access_token['expires_delta'].total_seconds()),
-                               refresh_token_id=refresh_token['payload']['jti'],
-                               refresh_token_ttl=int(refresh_token['expires_delta'].total_seconds()))
-
-    # Return the access token, refresh token, and token type
-    return TokensResponse(access_token=access_token['token'], refresh_token=refresh_token['token'])
-
-@r.post("/logout")
-async def logout(token_payload: Annotated[dict, Depends(get_valid_access_token)]):
-    """
-    Logs out the user
-    \f
-    User sessions, access & refresh token will be revoked.
-
-    Args:
-        token_payload (dict): The access token payload.
-
-    Returns:
-        dict: A dictionary containing the message "Successfully logged out".
-    """
-    user_id: str = token_payload.get("sub")
-    session_id: str = token_payload.get("sid")
-    token_id: str = token_payload.get("jti")
-
-    # revoke session
-    await session_store.remove(user_id, session_id)
-
-    # revoke access & refresh token
-    await token_store.remove_with_sibling(token_id)
-
-    return {"message": "Successfully logged out"}
 
 async def _add_tokens_to_store(
     access_token_id: str,

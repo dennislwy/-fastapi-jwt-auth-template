@@ -6,19 +6,20 @@
 
 ## Auth
 - [x] when login, allow "Remember me"
-    - No remember me, access token expiry in `15mins`, refresh token expiry in `1 hour`
-    - Remember me, access token expiry in `1 day`, refresh token expiry in `2 weeks`
-    - remember me info should store in session cache
+    - [x] No remember me, access token expiry in `15mins`, refresh token expiry in `1 hour`
+    - [x] Remember me, access token expiry in `1 day`, refresh token expiry in `2 weeks`
+    - [x] remember me info should store in session cache
 - [x] Token revocation
-    - when user logged out, session will be revoked. Tokens of same session will be denied access.
-    - active session info will be store in cache & database (same expiry time as the refresh token)
+    - [x] when user logged out, session will be revoked. Tokens of same session will denied access.
+    - [x] active session info will be store in cache & database
         - session cache
-        - key: `{user_id}{session_id}`, value: `SessionInfo`
-    - valid tokens (whitelist tokens) will be store in cache (same expiry as the related token)
-      - active token cache
-        - key: `{token_jti}`, value: `{"type": "access token", "sibling_id": "jti of sibling"}`
-        - expiry same as the token
-- [x] Token reply attack prevention
+            - key: `{user_id}{session_id}`, value: `SessionInfo`
+            - expiry same as the recent refresh token
+    - [x] valid tokens (whitelist tokens) will be store in cache
+        - active token cache
+            - key: `{token_id}`, value: `{sibling_token_id}`
+            - expiry same as the token
+- [x] Token replay attack prevention
     - when user refreshes tokens, old tokens (access & refresh token) will be revoked. Refresh token are for single use only
 - [x] Token reuse attack prevention
     - As security measures, session will be revoke if revoked token was reused
