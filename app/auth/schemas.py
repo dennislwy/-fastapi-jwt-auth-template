@@ -29,7 +29,7 @@ class SessionInfo(BaseModel):
     """
     user_id: str
     session_id: str
-    remember_me: bool
+    remember_me: bool = False
     user_agent: str
     user_host: str
     last_active: datetime
