@@ -122,38 +122,6 @@ async def test_expiration():
     assert result is False
 
 @pytest.mark.asyncio
-async def test_update_last_activity():
-    """
-    Test the update_last_activity function.
-
-    This test checks if the last activity of a session can be successfully updated.
-    If the session does not exist, it creates a new session.
-    The expected result is True since we are updating the session.
-    """
-    # Check if the session exists, if not create a new session
-    if not await session_store.exists(user_id, session_id):
-        print("Session not exists, creating session in cache...")
-        await create_session_in_cache(user_id=user_id, session_id=session_id)
-
-    # Create a valid token payload
-    token_payload = {"sub": user_id, "sid": session_id}
-
-    # update existing session last activity
-    result = await session_store.update_last_activity(token_payload)
-
-    # Assert that the result is True, indicating the session was successfully updated
-    assert result is True
-
-    # Create a invalid token payload (fake session id)
-    token_payload = {"sub": user_id, "sid": "session-" + str(uuid.uuid4())[8:]}
-
-    # update non-existing session last activity
-    result = await session_store.update_last_activity(token_payload)
-
-    # Assert that the result is False, indicating the session was not updated
-    assert result is False
-
-@pytest.mark.asyncio
 async def test_remove():
     """
     Test the remove function.
@@ -268,16 +236,14 @@ async def test_update1():
         await create_session_in_cache(user_id=user_id, session_id=session_id)
 
     # Generate a new user agent for testing
-    new_user_agent = "Edge/12.0.0"
-
-    # Retrieve the session from the cache
-    session: SessionInfo = await session_store.retrieve(user_id, session_id)
-
-    # Update the user agent
-    session.user_agent = new_user_agent
+    new_user_agent = "MyUserAgent/1.0.0"
+    data = {"user_agent": new_user_agent}
 
     # Update the session in the cache
-    result = await session_store.update(user_id, session_id, session, 5)
+    result = await session_store.update(user_id=user_id,
+                                        session_id=session_id,
+                                        data=data,
+                                        ttl=5)
 
     # Assert that the result is True, indicating the session was successfully updated
     assert result is True
@@ -308,16 +274,13 @@ async def test_update2():
         await create_session_in_cache(user_id=user_id, session_id=session_id)
 
     # Generate a new user agent for testing
-    new_user_agent = "Mars/12.0.0"
-
-    # Retrieve the session from the cache
-    session: SessionInfo = await session_store.retrieve(user_id, session_id)
-
-    # Update the user agent
-    session.user_agent = new_user_agent
+    new_user_agent = "MyUserAgent/2.0.0"
+    data = {"user_agent": new_user_agent}
 
     # Update the session in the cache
-    result = await session_store.update(user_id, session_id, session)
+    result = await session_store.update(user_id=user_id,
+                                        session_id=session_id,
+                                        data=data,)
 
     # Assert that the result is True, indicating the session was successfully updated
     assert result is True

@@ -5,7 +5,7 @@
 - [x] add pylint & pytest Github workflows
 
 ## Auth
-- [ ] when login, allow "Remember me"
+- [x] when login, allow "Remember me"
     - No remember me, access token expiry in `15mins`, refresh token expiry in `1 hour`
     - Remember me, access token expiry in `1 day`, refresh token expiry in `2 weeks`
     - remember me info should store in session cache
@@ -39,11 +39,12 @@
 
 ## Session Tracking
 - [ ] user able to view all active session (like GitHub)
-    - session_id
-    - user_id
-    - last_active
-    - last_user_agent
-    - last_ip_address
+    - [x] session_id
+    - [x] user_id
+    - [x] last_active
+    - [x] last_user_agent
+    - [x] last_ip_address
+    - [x] exp (session expiration time)
     - last_location
     - login_time
     - login_user_agent
@@ -57,7 +58,7 @@
 - [ ] Enroll 2FA & send OTP via SMS
 
 ## Caching
-- [ ] In-memory
+- [x] In-memory
 - [ ] Redis
 - [ ] Memcached
 

@@ -11,14 +11,14 @@ from .schemas import SessionInfo
 # value: SessionInfo
 cache = SimpleMemoryCache()
 
-async def add(user_id: str, session_id: str, value, ttl: int) -> bool:
+async def add(user_id: str, session_id: str, value: SessionInfo, ttl: int) -> bool:
     """
     Add a user session to the cache store.
 
     Args:
         user_id (str): The ID of the user.
         session_id (str): The ID of the user session.
-        value (Any): The value object.
+        value (SessionInfo): The SessionInfo object.
         ttl (int): The time-to-live (TTL) for the user session in seconds.
 
     Returns:
@@ -98,28 +98,28 @@ async def retrieve_by_userid(
     # Return the dictionary of sessions
     return sessions
 
-async def update(user_id: str, session_id: str, value, ttl: Optional[int] = None) -> bool:
+async def replace(user_id: str, session_id: str, value: SessionInfo, ttl: Optional[int] = None) -> bool:
     """
-    Update a user session in the cache store.
+    Replace a user session in the cache store.
 
     Args:
         user_id (str): The ID of the user.
         session_id (str): The ID of the user session.
-        value (Any): The value object.
+        value (SessionInfo): The SessionInfo object.
         ttl (Optional[int]): The time-to-live (TTL) for the user session in seconds. If not
         provided, the TTL will not be updated.
 
     Returns:
-        bool: True if the session was successfully updated, False otherwise.
+        bool: True if the session was successfully replaced, False otherwise.
     """
     if ttl:
-        print(f"Updating session '{user_id}:{session_id}' in session store, TTL: {ttl} seconds")
+        print(f"Replacing session '{user_id}:{session_id}' in session store, TTL: {ttl} seconds")
         return await cache.set(key=session_id, value=value, namespace=user_id, ttl=ttl)
 
-    print(f"Updating session '{user_id}:{session_id}' in session store")
+    print(f"Replacing session '{user_id}:{session_id}' in session store")
     return await cache.set(key=session_id, value=value, namespace=user_id)
 
-async def update_ttl(user_id: str, session_id: str, ttl: int):
+async def update_ttl(user_id: str, session_id: str, ttl: int) -> bool:
     """
     Update the time-to-live (TTL) of a user session in the cache store.
 
@@ -133,39 +133,6 @@ async def update_ttl(user_id: str, session_id: str, ttl: int):
     """
     print(f"Updating TTL of session '{user_id}:{session_id}' in session store")
     return await cache.expire(key=session_id, namespace=user_id, ttl=ttl)
-
-async def update_last_activity(token_payload: dict) -> bool:
-    """
-    Update the last activity timestamp of the user session.
-
-    This function retrieves the user session from the cache store using the user ID and session ID
-    from the token payload. If the session exists, it updates the last activity timestamp to the
-    current time and saves the updated session back to the cache store.
-
-    Args:
-        token_payload (dict): The payload of the token, which should include 'sub' (subject,
-        representing the user ID) and 'sid' (session ID).
-
-    Return:
-        bool: True if the session was successfully updated, False otherwise.
-    """
-    # Retrieve the user ID & session ID from the payload
-    user_id = token_payload.get("sub")
-    session_id = token_payload.get("sid")
-
-    # Check if the session exists in the cache
-    if not await cache.exists(key=session_id, namespace=user_id):
-        # If the session does not exist, return
-        return False
-
-    # Get the session info from the cache
-    value: SessionInfo = await cache.get(key=session_id, namespace=user_id)
-
-    # Update the last active timestamp to the current time
-    value.last_active = datetime.utcnow()
-
-    # Save the updated session info back to the cache
-    return await cache.set(key=session_id, namespace=user_id, value=value)
 
 async def remove(user_id: str, session_id: Optional[str] = None) -> int:
     """
@@ -198,3 +165,51 @@ async def remove(user_id: str, session_id: Optional[str] = None) -> int:
             result += await cache.delete(key=session.session_id, namespace=user_id)
 
     return result
+
+async def update(user_id: str, session_id: str, data: dict, ttl: Optional[int] = None) -> bool:
+    """
+    Update a session in the session store with the provided data.
+
+    Args:
+        user_id (str): The ID of the user associated with the session.
+        session_id (str): The ID of the session to update.
+        data (dict): The data to update the session with.
+        ttl (Optional[int]): The time-to-live (TTL) for the session in seconds.
+
+    Returns:
+        bool: True if the session was successfully updated, False otherwise.
+
+    Usage:
+        This function is used to update the data of a specific session in the session store.
+        The `user_id` and `session_id` are used to identify the session, and the `data`
+        dictionary contains the new data for the session. The `ttl` parameter is optional
+        and specifies the new TTL for the session in seconds.
+
+        Example:
+            ```python
+            user_id = "15b224ea-0b13-4530-8b0f-6986ded87a86"
+            session_id = "f9bf5c3b-ad70-4c62-bb4b-7db250182a23"
+            data = {"user_agent": "Mozilla/5.0", "last_active": datetime.utcnow() }
+            ttl = 3600  # 1 hour
+
+            success = await update(user_id, session_id, data, ttl)
+            if success:
+                print("Session updated successfully")
+            else:
+                print("Failed to update session")
+    """
+    session_info = await retrieve(user_id, session_id)
+
+    if session_info is None:
+        return False
+
+    # update session_info with data
+    for key, value in data.items():
+        setattr(session_info, key, value)
+
+    if ttl:
+        print(f"Updating session '{user_id}:{session_id}' in session store, TTL: {ttl} seconds")
+        return await cache.set(key=session_id, value=session_info, ttl=ttl, namespace=user_id)
+
+    print(f"Updating session '{user_id}:{session_id}' in session store")
+    return await cache.set(key=session_id, value=session_info, namespace=user_id)

@@ -1,7 +1,9 @@
 import uuid
+from typing import Optional
 from datetime import datetime, timedelta
 from jose import jwt
 from passlib.context import CryptContext
+from fastapi import Request
 from app.config import settings
 from app.database import AsyncSession
 from app.user import get_user_by_email
@@ -51,7 +53,7 @@ async def authenticate_user(email: str, password: str, db: AsyncSession):
     return user
 
 
-def create_token(data: dict, expires_delta: timedelta) -> dict:
+def create_token(data: dict, expires_delta: Optional[timedelta] = None) -> dict:
     """
     Create a JSON Web Token (JWT) with the given dictionary data and expiration delta.
 
@@ -65,13 +67,12 @@ def create_token(data: dict, expires_delta: timedelta) -> dict:
     # Copy the input data to avoid modifying the original dictionary
     to_encode = data.copy()
 
-    # If an expiration delta is provided, calculate the expiration time by adding it to the current time
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-
     # If no expiration delta is provided, use the default token expiration time
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=DEFAULT_TOKEN_EXPIRE_MINUTES)
+    if expires_delta is None:
+        expires_delta = timedelta(minutes=DEFAULT_TOKEN_EXPIRE_MINUTES)
+
+    # Calculate the expiration time based on the current time and the expiration delta
+    expire = datetime.utcnow() + expires_delta
 
     # Add a unique identifier to the token data
     to_encode.update({"jti": str(uuid.uuid4())})
@@ -82,5 +83,24 @@ def create_token(data: dict, expires_delta: timedelta) -> dict:
 
     return {
         'token': jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM),
-        'payload': to_encode
+        'payload': to_encode,
+        'expires_delta': expires_delta
         }
+
+def generate_session_info_data(request: Request) -> dict:
+    """
+    Generate session information data based on the given request.
+
+    Args:
+        request (Request): The request object containing the necessary information.
+
+    Returns:
+        dict: A dictionary containing the generated session information data.
+            - user_agent (str): The user agent from the request headers.
+            - user_host (str): The host of the client making the request.
+            - last_active (datetime): The current UTC datetime.
+    """
+    user_agent = request.headers.get("user-agent")
+    user_host = request.client.host
+    last_active = datetime.utcnow()
+    return {"user_agent": user_agent, "user_host": user_host, "last_active": last_active}

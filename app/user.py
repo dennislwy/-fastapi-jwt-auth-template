@@ -105,7 +105,7 @@ async def get_user_by_id(user_id: str, db: Annotated[AsyncSession, Depends(get_d
         db (AsyncSession): The database session.
 
     Returns:
-        User: The user object.
+        User: The user object or None if not found.
 
     Raises:
         None

@@ -20,7 +20,7 @@ from app.utils import get_current_epoch
 from app.token import get_valid_access_token, get_valid_refresh_token
 from app.user import get_user_by_id
 from .schemas import TokensResponse, SessionInfo
-from .utils import authenticate_user, hash_password, create_token
+from .utils import authenticate_user, hash_password, create_token, generate_session_info_data
 
 router = r = APIRouter()
 
@@ -62,52 +62,77 @@ async def register_user(request: UserCreateRequest, db: Annotated[AsyncSession, 
     await db.refresh(new_user)
     return new_user
 
-# refresh tokens (access and refresh token) using valid refresh token
 @r.post("/refresh", response_model=TokensResponse)
-async def refresh_tokens(token_payload: Annotated[dict, Depends(get_valid_refresh_token)],
+async def refresh_tokens(request: Request,
+                         token_payload: Annotated[dict, Depends(get_valid_refresh_token)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> TokensResponse:
+    """
+    Refresh the access and refresh tokens.
+    /f
+    This function takes a valid refresh token, validates it, and generates a new set of access and refresh tokens.
+    It also updates the session information and revokes the old tokens to prevent token replay attacks.
 
+    Args:
+        request (Request): The incoming request.
+        token_payload (dict): The payload of the valid refresh token.
+        db (AsyncSession): The database session.
+
+    Returns:
+        TokensResponse: The response containing the new access token, refresh token, and token type.
+
+    Raises:
+        HTTPException: If the session or user is not found.
+    """
+    # Extract the session id, user id, and token id from the token payload
     session_id: str = token_payload.get("sid")
     user_id: str = token_payload.get("sub")
     token_id: str = token_payload.get("jti")
 
-    # get user info by user id
+    # Retrieve the session information by session id
+    session_info: SessionInfo = await session_store.retrieve(user_id, session_id)
+    if session_info is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session not found")
+
+    # Retrieve the user information by user id
     user = await get_user_by_id(user_id, db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
-    # TODO: token TTL should obtain from session cache
-    # tokens time-to-live
-    access_token_expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    refresh_token_expires_delta = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+    # Generate new access and refresh tokens
+    access_token, refresh_token = await _generate_tokens(user_id,
+                                                         user.email,
+                                                         session_id,
+                                                         session_info.remember_me)
 
-    # create access token
-    access_token = create_token(
-        data={"sub": user_id, "email": user.email, "sid": session_id},
-        expires_delta=access_token_expires_delta)
-    print(f"Created access token: {access_token['token']}, " +
-          f"exp: {access_token['payload']['exp']}")
+    # Update the session information (user_agent, user_host, last_active, exp) and extend its expiry time
+    new_session_info_data = generate_session_info_data(request)
+    new_session_info_data['exp'] = get_current_epoch() + int(refresh_token['expires_delta']
+                                                             .total_seconds())
+    # update session info in session store and extend expiry time
+    if await session_store.update(user_id, session_id,
+                                  data=new_session_info_data,
+                                  ttl=int(refresh_token['expires_delta'].total_seconds())):
+        print(f"Session info '{session_id}' updated")
 
-    # create refresh token
-    refresh_token = create_token(
-        data={"sub": user_id, "sid": session_id},
-        expires_delta=refresh_token_expires_delta)
-    print(f"Created refresh token: {refresh_token['token']}, " +
-          f"exp: {refresh_token['payload']['exp']}")
-
-    # add token IDs to token store
+    # Add the new token ids to the token store
     await _add_tokens_to_store(access_token_id=access_token['payload']['jti'],
-                               access_token_ttl=access_token_expires_delta.seconds,
+                               access_token_ttl=int(access_token['expires_delta']
+                                                    .total_seconds()),
                                refresh_token_id=refresh_token['payload']['jti'],
-                               refresh_token_ttl=refresh_token_expires_delta.seconds)
+                               refresh_token_ttl=int(refresh_token['expires_delta']
+                                                     .total_seconds()))
 
-    # revoking old tokens (Prevent token reply attack, refresh token is for single-use only)
+    # Revoke the old tokens to prevent token replay attacks (refresh token is for single-use only)
     await token_store.remove_with_sibling(token_id)
 
-    # Return the access token, refresh token, and token type
+    # Return the new access token, refresh token, and token type
     return TokensResponse(access_token=access_token['token'], refresh_token=refresh_token['token'])
 
 @r.post("/login", response_model=TokensResponse)
-async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-                db: Annotated[AsyncSession, Depends(get_db)]) -> TokensResponse:
+async def login(request: Request,
+                form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+                db: Annotated[AsyncSession, Depends(get_db)],
+                remember_me: bool = False) -> TokensResponse:
     """
     Authenticates a user and generates access and refresh tokens.
     \f
@@ -115,6 +140,7 @@ async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm
         request (Request): The incoming request.
         form_data (OAuth2PasswordRequestForm): The form data containing the username and password.
         db (AsyncSession): The database session.
+        remember_me (bool): Whether to remember the user. Defaults to False.
 
     Returns:
         TokensResponse: The response containing the access token, refresh token, and token type.
@@ -147,40 +173,32 @@ async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm
     # generate new session id
     session_id = str(uuid.uuid4())
 
-    access_token_expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    refresh_token_expires_delta = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
-
     # user id string
     user_id = str(user.id)
 
-    # create access token
-    access_token = create_token(
-        data={"sub": user_id, "email": user.email, "sid": session_id},
-        expires_delta=access_token_expires_delta)
-    print(f"Created access token: {access_token['token']}, exp: {access_token['payload']['exp']}")
-
-    # create refresh token
-    refresh_token = create_token(
-        data={"sub": user_id, "sid": session_id},
-        expires_delta=refresh_token_expires_delta)
-    print(f"Created refresh token: {refresh_token['token']}, exp: {refresh_token['payload']['exp']}")
+    # generate access & refresh token
+    access_token, refresh_token = await _generate_tokens(user_id,
+                                                         user.email,
+                                                         session_id,
+                                                         remember_me)
 
     # Obtain user browser information
     user_agent = str(request.headers["User-Agent"])
     user_host = request.client.host
 
     # create new session and add to session store
-    await _add_session_to_store(user_id,
-                                session_id,
-                                user_agent,
-                                user_host,
-                                refresh_token_expires_delta.seconds)
+    await _add_session_to_store(user_id=user_id,
+                                session_id=session_id,
+                                remember_me=remember_me,
+                                user_agent=user_agent,
+                                user_host=user_host,
+                                ttl=int(refresh_token['expires_delta'].total_seconds()))
 
     # add token IDs to token store
     await _add_tokens_to_store(access_token_id=access_token['payload']['jti'],
-                               access_token_ttl=access_token_expires_delta.seconds,
+                               access_token_ttl=int(access_token['expires_delta'].total_seconds()),
                                refresh_token_id=refresh_token['payload']['jti'],
-                               refresh_token_ttl=refresh_token_expires_delta.seconds)
+                               refresh_token_ttl=int(refresh_token['expires_delta'].total_seconds()))
 
     # Return the access token, refresh token, and token type
     return TokensResponse(access_token=access_token['token'], refresh_token=refresh_token['token'])
@@ -236,6 +254,7 @@ async def _add_tokens_to_store(
 async def _add_session_to_store(
     user_id: str,
     session_id: str,
+    remember_me: bool,
     user_agent: str,
     user_host: str,
     ttl: int) -> bool:
@@ -245,6 +264,7 @@ async def _add_session_to_store(
     Args:
         user_id (str): The user ID.
         session_id (str): The session ID.
+        remember_me (bool): Whether to remember the user
         user_agent (str): The user agent.
         user_host (str): The user host.
         ttl (int): The time to live for the session (seconds).
@@ -253,9 +273,36 @@ async def _add_session_to_store(
         bool: True if the session was successfully created, False otherwise.
     """
     # add session id to SessionInfo and add to active session cache
-    session_info = SessionInfo(user_id=user_id, session_id=session_id, user_agent=user_agent,
-                               user_host=user_host, last_active=datetime.utcnow(),
+    session_info = SessionInfo(user_id=user_id, session_id=session_id, remember_me=remember_me,
+                               user_agent=user_agent, user_host=user_host,
+                               last_active=datetime.utcnow(),
                                exp=get_current_epoch() + ttl)
 
     # add session id to sessions cache, expiry time = refresh token expiry time
     return await session_store.add(user_id, session_id, session_info, ttl)
+
+async def _generate_tokens(user_id: str, email: str, session_id: str, remember_me: bool):
+    if not remember_me:
+        print("Generating short-lived tokens")
+        access_token_exp_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        refresh_token_exp_delta = timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+    else:
+        print("Generating long-lived tokens")
+        access_token_exp_delta = timedelta(minutes=settings
+                                           .REMEMBER_ME_ACCESS_TOKEN_EXPIRE_MINUTES)
+        refresh_token_exp_delta = timedelta(minutes=settings
+                                            .REMEMBER_ME_REFRESH_TOKEN_EXPIRE_MINUTES)
+
+    # create access token
+    access_token = create_token(
+        data={"sub": user_id, "email": email, "sid": session_id},
+        expires_delta=access_token_exp_delta)
+    print(f"Created access token: {access_token['token']}, exp: {access_token['payload']['exp']}")
+
+    # create refresh token
+    refresh_token = create_token(
+        data={"sub": user_id, "sid": session_id},
+        expires_delta=refresh_token_exp_delta)
+    print(f"Created refresh token: {refresh_token['token']}, exp: {refresh_token['payload']['exp']}")
+
+    return access_token, refresh_token
