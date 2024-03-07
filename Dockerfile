@@ -5,7 +5,7 @@ ENV PYTHONUNBUFFERED 1
 ENV PYTHONPATH /home/app
 
 WORKDIR /home/app
-COPY ./pyproject.toml ./poetry.lock* ./
+COPY ./pyproject.toml ./poetry.lock ./
 
 RUN pip install poetry
 RUN poetry install
