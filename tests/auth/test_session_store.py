@@ -413,3 +413,27 @@ async def test_update_ttl():
     result = await session_store.exists(user_id, session_id)
     # Assert that the result is False, indicating the session has expired
     assert result is False
+
+
+@pytest.mark.asyncio
+async def test_update_non_exist_session():
+    """
+    Test the update function of the session store when the session does not exist.
+
+    Steps:
+    1. Generate a new user agent to update the session.
+    2. Create a data dictionary with the new user agent.
+    3. Call the update method of the session store with a non-existent session ID.
+    4. Assert that the result is False, indicating that the session was not updated.
+    """
+    # Generate a new data to update
+    new_user_agent = "MyUserAgent/2.0.0"
+    data = {"user_agent": new_user_agent}
+
+    # Update the session in the cache
+    result = await session_store.update(user_id=user_id,
+                                        session_id="non-exist-session-id",
+                                        data=data)
+
+    # Assert that the result is False, indicating the session was not updated
+    assert result is False
