@@ -1,6 +1,7 @@
 import sys
 import logging
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 import app.models
 from app.database import init_db
@@ -29,6 +30,10 @@ app = FastAPI(
 )
 
 app.include_router(router)
+
+@app.get("/", include_in_schema=False)
+def read_root():
+    return RedirectResponse(url='/docs')
 
 async def startup():
     logging.info("Starting up server")

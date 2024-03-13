@@ -102,11 +102,11 @@ async def login(request: Request,
         )
 
     # check if user is verified
-    if not user.is_verified and not settings.DEBUG:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Unverified user"
-        )
+    # if not user.is_verified and not settings.DEBUG:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_403_FORBIDDEN,
+    #         detail="Unverified user"
+    #     )
 
     # generate new session id
     session_id = str(uuid.uuid4())
@@ -175,7 +175,7 @@ async def refresh_tokens(request: Request,
                          db: Annotated[AsyncSession, Depends(get_db)]) -> TokensResponse:
     """
     Refresh the access and refresh tokens.
-    /f
+    \f
     This function takes a valid refresh token, validates it, and generates a new set of access and refresh tokens.
     It also updates the session information and revokes the old tokens to prevent token replay attacks.
 
