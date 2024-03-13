@@ -153,12 +153,20 @@ async def get_user_by_email(email: str, db: Annotated[AsyncSession, Depends(get_
         result = await db.execute(select(User).where(User.email == email))
         user = result.scalar()
 
-        print(f"Retrieved user '{email}' from database")
+        if user is None:
+            print(f"User '{email}' not found in database")
+            user = False
+        else:
+            print(f"Retrieved user '{email}' from database")
 
         # Cache the user object
         await cache.add(key=email, value=user, ttl=cache_ttl)
-    else:
+
+    elif isinstance(user, User):
         print(f"Retrieved user '{email}' from cache")
+
+    else:
+        print(f"User '{email}' does not exists")
 
     # Return the user object
     return user

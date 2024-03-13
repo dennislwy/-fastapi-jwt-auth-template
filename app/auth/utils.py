@@ -36,7 +36,8 @@ async def authenticate_user(email: str, password: str, db: AsyncSession):
         db (AsyncSession): The database session.
 
     Returns:
-        Union[User, bool]: The authenticated user object if authentication is successful, False otherwise.
+        Union[User, bool]: The authenticated user object if authentication is successful,
+        False otherwise.
     """
     # Retrieve the user from the database based on the provided username
     user = await get_user_by_email(email, db)
@@ -51,7 +52,6 @@ async def authenticate_user(email: str, password: str, db: AsyncSession):
 
     # Return the user object if authentication is successful
     return user
-
 
 def create_token(data: dict, expires_delta: Optional[timedelta] = None) -> dict:
     """
