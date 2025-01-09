@@ -1,6 +1,6 @@
 import uuid
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import jwt
 from passlib.context import CryptContext
 from fastapi import Request
@@ -72,14 +72,14 @@ def create_token(data: dict, expires_delta: Optional[timedelta] = None) -> dict:
         expires_delta = timedelta(minutes=DEFAULT_TOKEN_EXPIRE_MINUTES)
 
     # Calculate the expiration time based on the current time and the expiration delta
-    expire = datetime.utcnow() + expires_delta
+    expire = datetime.now(timezone.utc) + expires_delta
 
     # Add a unique identifier to the token data
     to_encode.update({"jti": str(uuid.uuid4())})
     # Add the expiration time to the token data
     to_encode.update({"exp": expire})
     # Add the issued at time to the token data
-    to_encode.update({"iat": datetime.utcnow()})
+    to_encode.update({"iat": datetime.now(timezone.utc)})
 
     return {
         'token': jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM),
@@ -102,5 +102,5 @@ def generate_session_info_data(request: Request) -> dict:
     """
     user_agent = request.headers.get("user-agent")
     user_host = request.client.host
-    last_active = datetime.utcnow()
+    last_active = datetime.now(timezone.utc)
     return {"user_agent": user_agent, "user_host": user_host, "last_active": last_active}

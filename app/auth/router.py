@@ -6,7 +6,7 @@ It includes routes for user registration, user login, user logout, and other aut
 
 import uuid
 from typing import Annotated
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, status, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy import select, exists
@@ -282,7 +282,7 @@ async def _add_session_to_store(
     # add session id to SessionInfo and add to active session cache
     session_info = SessionInfo(user_id=user_id, session_id=session_id, remember_me=remember_me,
                                user_agent=user_agent, user_host=user_host,
-                               last_active=datetime.utcnow(),
+                               last_active=datetime.now(timezone.utc),
                                exp=get_current_epoch() + ttl)
 
     # add session id to sessions cache, expiry time = refresh token expiry time
