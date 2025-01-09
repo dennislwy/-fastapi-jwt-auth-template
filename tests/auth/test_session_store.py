@@ -3,7 +3,7 @@ import uuid
 import asyncio
 import random
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.auth import session_store
 from app.auth.schemas import SessionInfo
 
@@ -35,7 +35,7 @@ async def create_session_in_cache(
         session_id = "session-" + str(uuid.uuid4())[8:]
 
     # Get the current time
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # Calculate the expiration time by adding the TTL to the current time
     exp = now + timedelta(seconds=ttl)
